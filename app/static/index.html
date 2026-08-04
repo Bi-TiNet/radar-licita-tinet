@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radar Licita ISP</title><link rel="stylesheet" href="/static/styles.css"></head>
+<body>
+<div class="ambient a1"></div><div class="ambient a2"></div>
+<div class="app">
+<aside>
+  <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>ISP Intelligence</span></div></div>
+  <nav><button class="nav active" data-view="opportunities">⌁ <span>Oportunidades</span></button><button class="nav" data-view="general">▦ <span>Outras Oportunidades</span></button><button class="nav" data-view="favorites">★ <span>Favoritos</span></button><button class="nav" data-view="notifications">◉ <span>Notificações</span></button><button class="nav" data-view="sync">↻ <span>Coletas</span></button></nav>
+  <div class="source"><span class="pulse"></span><div><strong>PNCP conectado</strong><small>4 municípios monitorados</small></div></div>
+</aside>
+<main>
+<header><div><p class="eyebrow">CENTRAL DE OPORTUNIDADES PÚBLICAS</p><h1>Licitações que combinam com a <span>Ti.Net</span></h1><p class="sub">Monitoramento inteligente de telecom, fibra, links e infraestrutura de rede.</p></div><div class="actions"><span class="automation-badge" id="automationBadge">● Automático: 30 min</span><button class="ghost" id="demoBtn" style="display:none">Carregar demonstração</button><button class="ghost" id="testNotifyBtn">◉ Testar notificações</button><button class="primary" id="syncBtn">↻ Sincronizar agora</button></div></header>
+<section class="stats" id="stats"></section>
+<section class="toolbar glass"><div class="search">⌕ <input id="search" placeholder="Buscar por objeto, órgão ou termo..."></div><select id="city"><option value="">Todos os municípios</option></select><select id="score"><option value="0">Qualquer aderência</option><option value="40">40%+</option><option value="60">60%+</option><option value="80">80%+</option></select><select id="status"><option value="">Todos os status</option><option value="aberta">Abertas</option><option value="encerrada">Encerradas</option></select></section>
+<section class="content"><div class="section-head"><div><h2 id="viewTitle">Oportunidades priorizadas</h2><p id="viewDesc">Ordenadas pelo nível de aderência ao negócio.</p></div><span class="count" id="count">0 encontradas</span></div><div id="list" class="cards"></div></section>
+</main></div>
+<div class="toast" id="toast"></div>
+<script src="/static/app.js"></script>
+</body></html>

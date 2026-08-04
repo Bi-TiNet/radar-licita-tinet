@@ -1,0 +1,31 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+*.log
+backup*/
+backup_*/
+diagnostico_*.json
+.DS_Store
+Thumbs.db
+evolution_radar/
+qrcode_whatsapp.png
+connect_instance*.json
+create_instance*.json
+delete_instance*.json
+tmp/
+temp/
+.cache/
+
+# Banco SQLite runtime
+data/
+*.db-shm
+*.db-wal
+
+# Diagnósticos locais
+*_pncp.json
