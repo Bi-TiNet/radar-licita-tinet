@@ -7,3 +7,4 @@ urllib3<2
 beautifulsoup4==4.13.4
 
 playwright==1.60.0
+greenlet==3.2.3
