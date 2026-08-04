@@ -18,6 +18,23 @@ from .workflow import decorate, ensure_workflow_schema, mark_seen, notify_if_nee
 
 STATIC_DIR = Path(__file__).parent / "static"
 
+ACTIVE_DATE_SQL = """(
+    proposal_end_at IS NULL
+    OR TRIM(proposal_end_at) = ''
+    OR (
+        CASE
+            WHEN proposal_end_at LIKE '__/__/____%'
+            THEN date(
+                substr(proposal_end_at,7,4) || '-' ||
+                substr(proposal_end_at,4,2) || '-' ||
+                substr(proposal_end_at,1,2)
+            )
+            ELSE date(substr(proposal_end_at,1,10))
+        END
+    ) >= date('now','localtime')
+)"""
+
+
 async def scheduler_loop():
     try:
         await asyncio.to_thread(run_sync)
@@ -53,15 +70,54 @@ def municipalities(): return [{"code":c,"name":n} for c,n in MUNICIPALITIES.item
 
 @app.get("/api/dashboard")
 def dashboard():
-    stats = row("""SELECT COUNT(*) total, SUM(CASE WHEN status='aberta' THEN 1 ELSE 0 END) open, SUM(CASE WHEN favorite=1 THEN 1 ELSE 0 END) favorites, SUM(CASE WHEN score>=70 THEN 1 ELSE 0 END) hot, MAX(updated_at) last_update FROM opportunities WHERE dismissed=0""") or {}
-    by_city = rows("SELECT municipality, COUNT(*) total, ROUND(AVG(score),1) avg_score FROM opportunities WHERE dismissed=0 GROUP BY municipality ORDER BY total DESC")
-    by_category = rows("SELECT category, COUNT(*) total FROM opportunities WHERE dismissed=0 GROUP BY category ORDER BY total DESC LIMIT 8")
-    latest_sync = row("SELECT * FROM sync_runs ORDER BY id DESC LIMIT 1")
-    return {"stats":stats,"by_city":by_city,"by_category":by_category,"latest_sync":latest_sync}
+    stats = row(
+        f"""SELECT
+                COUNT(*) total,
+                SUM(CASE WHEN status='aberta' THEN 1 ELSE 0 END) open,
+                SUM(CASE WHEN favorite=1 THEN 1 ELSE 0 END) favorites,
+                SUM(CASE WHEN score>=70 THEN 1 ELSE 0 END) hot,
+                MAX(updated_at) last_update
+            FROM opportunities
+            WHERE dismissed=0
+              AND {ACTIVE_DATE_SQL}"""
+    ) or {}
+
+    by_city = rows(
+        f"""SELECT
+                municipality,
+                COUNT(*) total,
+                ROUND(AVG(score),1) avg_score
+            FROM opportunities
+            WHERE dismissed=0
+              AND {ACTIVE_DATE_SQL}
+            GROUP BY municipality
+            ORDER BY total DESC"""
+    )
+
+    by_category = rows(
+        f"""SELECT category, COUNT(*) total
+            FROM opportunities
+            WHERE dismissed=0
+              AND {ACTIVE_DATE_SQL}
+            GROUP BY category
+            ORDER BY total DESC
+            LIMIT 8"""
+    )
+
+    latest_sync = row(
+        "SELECT * FROM sync_runs ORDER BY id DESC LIMIT 1"
+    )
+
+    return {
+        "stats": stats,
+        "by_city": by_city,
+        "by_category": by_category,
+        "latest_sync": latest_sync,
+    }
 
 @app.get("/api/opportunities")
 def opportunities(city: Optional[str] = None, min_score: int = Query(0, ge=0, le=100), max_score: Optional[int] = Query(None, ge=0, le=100), status: Optional[str] = None, category: Optional[str] = None, q: Optional[str] = None, favorite: bool = False, limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)):
-    where=["dismissed=0","score>=?"]; params: List[Any]=[min_score]
+    where=["dismissed=0","score>=?",ACTIVE_DATE_SQL]; params: List[Any]=[min_score]
     if max_score is not None: where.append("score<=?"); params.append(max_score)
     if city: where.append("municipality_code=?"); params.append(city)
     if status: where.append("status=?"); params.append(status)

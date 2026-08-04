@@ -29,3 +29,9 @@ data/
 
 # Diagnósticos locais
 *_pncp.json
+
+# Scripts temporarios de manutencao
+patch_*.py
+corrigir_*.py
+conferir_*.py
+*.backup_*
