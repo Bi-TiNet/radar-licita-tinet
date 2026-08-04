@@ -35,3 +35,9 @@ patch_*.py
 corrigir_*.py
 conferir_*.py
 *.backup_*
+
+diagnostico_bll_mac/
+diagnostico_bll_headless.py
+diagnostico_endpoint_bll.py
+diagnostico_playwright_bll.py
+data/playwright_bll_profile/

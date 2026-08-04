@@ -10,6 +10,7 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
+from .bll_browser import collect_detail_pages, collect_search_rows
 
 from .domain import MUNICIPALITIES, score_relevance
 
@@ -32,6 +33,26 @@ TARGETS = {
 # Fallback real confirmado na BLL em 08/07/2026.
 # É usado somente se a página pública não retornar alguma linha durante a coleta.
 KNOWN_ACTIVE = []
+
+CLOSED_SITUATIONS = {
+    "GRAVADO",
+    "DESERTO",
+    "CANCELADO",
+    "FRACASSADO",
+    "SUSPENSO",
+    "REVOGADO",
+    "ANULADO",
+    "ADJUDICADO",
+    "HOMOLOGADO",
+    "RESULTADO FINAL",
+}
+
+LAST_DIAGNOSTICS: Dict[str, object] = {}
+
+
+def get_last_diagnostics() -> dict:
+    return dict(LAST_DIAGNOSTICS)
+
 
 
 def _norm(value: str) -> str:
@@ -99,14 +120,73 @@ def _status(situation: str, end_at: Optional[str]) -> str:
 
 
 def _extract_object(html: str) -> Optional[str]:
-    soup = BeautifulSoup(html, "html.parser")
-    text = " ".join(soup.stripped_strings)
-    match = re.search(r"\bOBJETO\b\s*(.+?)(?:\s+OBSERVA(?:Ç|C)ÃO\b|\s+Cliente\s+Tipo de arquivo|$)", text, re.I)
-    if not match:
-        return None
-    obj = re.sub(r"\s+", " ", match.group(1)).strip(" :-")
-    return obj if len(obj) >= 20 else None
+    soup = BeautifulSoup(
+        html or "",
+        "html.parser",
+    )
 
+    field = soup.select_one(
+        "textarea#ProductOrService, "
+        "textarea[name='ProductOrService']"
+    )
+
+    if field is not None:
+        text = re.sub(
+            r"\s+",
+            " ",
+            field.get_text(
+                " ",
+                strip=True,
+            )
+            or field.get("value", ""),
+        ).strip()
+
+        if text:
+            return text
+
+    candidate = soup.find(
+        id=re.compile(
+            r"ProductOrService|Objeto|Object",
+            re.I,
+        )
+    )
+
+    if candidate is not None:
+        text = re.sub(
+            r"\s+",
+            " ",
+            candidate.get_text(
+                " ",
+                strip=True,
+            )
+            or candidate.get("value", ""),
+        ).strip()
+
+        if text:
+            return text
+
+    page_text = re.sub(
+        r"\s+",
+        " ",
+        soup.get_text(
+            " ",
+            strip=True,
+        ),
+    )
+
+    match = re.search(
+        r"\bOBJETO\b\s*(.+?)"
+        r"(?=\bOBSERVA(?:ÇÃO|CAO)\b|$)",
+        page_text,
+        re.I,
+    )
+
+    if match:
+        text = match.group(1).strip()
+        if text:
+            return text
+
+    return None
 
 
 def _parse_brl(value: str) -> Optional[float]:
@@ -341,41 +421,233 @@ def fetch_all() -> List[dict]:
     session = requests.Session()
     discovered: Dict[str, dict] = {}
 
-    for search_url in SEARCH_URLS:
-        try:
-            response = _request(session, search_url)
-        except requests.RequestException:
-            continue
-        soup = BeautifulSoup(response.text, "html.parser")
-        for tr in soup.find_all("tr"):
-            cells = [re.sub(r"\s+", " ", td.get_text(" ", strip=True)) for td in tr.find_all("td")]
-            link = tr.find("a", href=re.compile(r"ProcessView", re.I))
-            href = link.get("href") if link else None
-            row = _row_to_item(cells, href)
+    diagnostics = {
+        "status": "running",
+        "browser": None,
+        "browser_details": None,
+        "rows_received": 0,
+        "target_rows": 0,
+        "ignored_non_target": 0,
+        "closed_or_expired": 0,
+        "duplicates": 0,
+        "active_rows": 0,
+        "browser_detail_pages_used": 0,
+        "browser_detail_object_hits": 0,
+        "detail_requests_fallback": 0,
+        "detail_errors": 0,
+        "returned": 0,
+        "error": None,
+    }
+
+    cities = [
+        "Santo Amaro",
+        "Saubara",
+        "Cachoeira",
+        "São Francisco do Conde",
+    ]
+
+    try:
+        browser_rows, browser_diagnostics = (
+            collect_search_rows(
+                cities=cities,
+                state_id="5",
+                days_back=365,
+                future_days=365,
+                max_offsets=20,
+            )
+        )
+
+        diagnostics["browser"] = (
+            browser_diagnostics
+        )
+        diagnostics["rows_received"] = len(
+            browser_rows
+        )
+
+        for browser_row in browser_rows:
+            row = _row_to_item(
+                browser_row.get("cells") or [],
+                browser_row.get("href"),
+            )
+
             if not row:
+                diagnostics[
+                    "ignored_non_target"
+                ] += 1
                 continue
-            key = "%s|%s" % (row["municipality_code"], _norm(row["notice_number"]))
+
+            diagnostics["target_rows"] += 1
+
+            normalized_situation = _norm(
+                row.get("situation", "")
+            )
+
+            current_status = _status(
+                row.get("situation", ""),
+                row.get("proposal_end_at"),
+            )
+
+            if (
+                normalized_situation in CLOSED_SITUATIONS
+                or current_status == "encerrada"
+            ):
+                diagnostics[
+                    "closed_or_expired"
+                ] += 1
+                continue
+
+            key = "%s|%s" % (
+                row["municipality_code"],
+                _norm(
+                    row["notice_number"]
+                ),
+            )
+
+            if key in discovered:
+                diagnostics["duplicates"] += 1
+                continue
+
             discovered[key] = row
 
-    # Completa o que a página pública não entregou naquele momento.
-    for known in KNOWN_ACTIVE:
-        key = "%s|%s" % (known["municipality_code"], _norm(known["notice_number"]))
-        if key not in discovered:
-            discovered[key] = dict(known)
+        diagnostics["active_rows"] = len(
+            discovered
+        )
 
-    result = []
-    for raw in discovered.values():
-        obj = raw.get("object")
-        estimated_value = raw.get("estimated_value")
-        url = raw.get("url")
-        if url and "ProcessView" in url:
-            try:
-                detail = _request(session, url)
-                obj = _extract_object(detail.text) or obj
-                estimated_value = _extract_value(detail.text) or estimated_value
-            except requests.RequestException:
-                pass
-        result.append(_adapt(raw, obj, estimated_value))
+        detail_urls = [
+            raw.get("url")
+            for raw in discovered.values()
+            if raw.get("url")
+            and "ProcessView" in raw.get("url", "")
+        ]
 
-    result.sort(key=lambda item: (item.get("proposal_end_at") or "9999", item["municipality"]))
-    return result
+        browser_details, detail_diagnostics = (
+            collect_detail_pages(
+                detail_urls
+            )
+        )
+
+        diagnostics["browser_details"] = (
+            detail_diagnostics
+        )
+
+        result: List[dict] = []
+
+        for raw in discovered.values():
+            obj = raw.get("object")
+            estimated_value = raw.get(
+                "estimated_value"
+            )
+            url = raw.get("url")
+
+            browser_detail = (
+                browser_details.get(url, {})
+                if url
+                else {}
+            )
+            detail_html = browser_detail.get(
+                "html"
+            )
+
+            if detail_html:
+                diagnostics[
+                    "browser_detail_pages_used"
+                ] += 1
+
+                obj = (
+                    _extract_object(detail_html)
+                    or browser_detail.get("object")
+                    or obj
+                )
+
+                estimated_value = (
+                    _extract_value(detail_html)
+                    or estimated_value
+                )
+
+                if obj:
+                    diagnostics[
+                        "browser_detail_object_hits"
+                    ] += 1
+
+            if (
+                url
+                and "ProcessView" in url
+                and not detail_html
+            ):
+                diagnostics[
+                    "detail_requests_fallback"
+                ] += 1
+
+                try:
+                    detail = _request(
+                        session,
+                        url,
+                    )
+
+                    obj = (
+                        _extract_object(
+                            detail.text
+                        )
+                        or obj
+                    )
+
+                    estimated_value = (
+                        _extract_value(
+                            detail.text
+                        )
+                        or estimated_value
+                    )
+
+                except requests.RequestException:
+                    diagnostics[
+                        "detail_errors"
+                    ] += 1
+
+            result.append(
+                _adapt(
+                    raw,
+                    obj,
+                    estimated_value,
+                )
+            )
+
+        result.sort(
+            key=lambda item: (
+                item.get(
+                    "proposal_end_at"
+                )
+                or "9999",
+                item.get(
+                    "municipality"
+                )
+                or "",
+                item.get(
+                    "notice_number"
+                )
+                or "",
+            )
+        )
+
+        diagnostics["returned"] = len(result)
+        diagnostics["status"] = "success"
+
+        LAST_DIAGNOSTICS.clear()
+        LAST_DIAGNOSTICS.update(
+            diagnostics
+        )
+
+        return result
+
+    except Exception as exc:
+        diagnostics["status"] = "error"
+        diagnostics["error"] = (
+            f"{type(exc).__name__}: {exc}"
+        )
+
+        LAST_DIAGNOSTICS.clear()
+        LAST_DIAGNOSTICS.update(
+            diagnostics
+        )
+
+        raise
+
