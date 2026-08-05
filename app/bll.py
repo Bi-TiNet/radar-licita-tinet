@@ -393,7 +393,7 @@ def _adapt(raw: dict, object_text: Optional[str] = None, estimated_value: Option
     description = object_text or raw.get("object") or raw.get("title") or raw["notice_number"]
     title = description if len(description) <= 180 else description[:177].rstrip() + "..."
     score, terms, category = score_relevance(title, description)
-    ext_src = "%s|%s|%s" % (code, raw["notice_number"], raw.get("url") or "")
+    ext_src = "%s|%s|%s" % (code, _norm(raw["notice_number"]), _norm(raw.get("agency") or ""))
     ext = hashlib.sha256(ext_src.encode("utf-8")).hexdigest()[:24]
     return {
         "external_id": "bll:%s" % ext,
