@@ -14,7 +14,6 @@ concurrency:
 
 jobs:
   collect:
-    if: vars.RADAR_CLOUD_READY == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -31,7 +30,7 @@ jobs:
         env:
           SUPABASE_URL: https://bcjrwgnmwajvbidhnzuk.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.RADAR_SUPABASE_SECRET_KEY }}
-          RADAR_NOTIFICATIONS_ENABLED: ${{ secrets.RADAR_NOTIFICATIONS_ENABLED }}
+          RADAR_NOTIFICATIONS_ENABLED: '0'
           MIN_SCORE_NOTIFY: '40'
           SMTP_HOST: ${{ secrets.RADAR_SMTP_HOST }}
           SMTP_PORT: ${{ secrets.RADAR_SMTP_PORT }}
