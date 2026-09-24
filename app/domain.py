@@ -11,6 +11,15 @@ MUNICIPALITIES = {
     "2904902": "Cachoeira",
     "2928604": "Santo Amaro",
     "2929750": "Saubara",
+    # RIDE Petrolina-Juazeiro (Decreto 10.296/2020).
+    "2611101": "Petrolina",
+    "2608750": "Lagoa Grande",
+    "2609808": "Orocó",
+    "2612604": "Santa Maria da Boa Vista",
+    "2918407": "Juazeiro",
+    "2907202": "Casa Nova",
+    "2909901": "Curaçá",
+    "2930774": "Sobradinho",
 }
 
 

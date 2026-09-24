@@ -13,6 +13,14 @@ const municipalities = [
   ['2904902', 'Cachoeira'],
   ['2928604', 'Santo Amaro'],
   ['2929750', 'Saubara'],
+  ['2611101', 'Petrolina (PE)'],
+  ['2608750', 'Lagoa Grande (PE)'],
+  ['2609808', 'Orocó (PE)'],
+  ['2612604', 'Santa Maria da Boa Vista (PE)'],
+  ['2918407', 'Juazeiro (BA)'],
+  ['2907202', 'Casa Nova (BA)'],
+  ['2909901', 'Curaçá (BA)'],
+  ['2930774', 'Sobradinho (BA)'],
 ];
 
 function escapeHtml(value) {
@@ -123,7 +131,7 @@ async function loadList() {
   state.rows = new Map(data.map((item) => [String(item.id), item]));
   const headings = {
     favorites: ['Oportunidades favoritas', 'Itens separados para acompanhamento.'],
-    general: ['Outras oportunidades', 'Licitações gerais dos quatro municípios, separadas do radar principal de telecom.'],
+    general: ['Outras oportunidades', 'Licitações gerais dos 12 municípios monitorados, separadas do radar principal de telecom.'],
     opportunities: ['Oportunidades priorizadas', 'Aderência de 40% ou mais ao negócio da Ti.Net.'],
   };
   [$('#viewTitle').textContent, $('#viewDesc').textContent] = headings[state.view];

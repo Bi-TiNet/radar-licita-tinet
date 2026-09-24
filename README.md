@@ -1,6 +1,6 @@
 # Radar Licita Ti.Net
 
-Sistema interno para monitoramento de licitações em São Francisco do Conde, Cachoeira, Santo Amaro e Saubara.
+Sistema interno para monitoramento de licitações em São Francisco do Conde, Cachoeira, Santo Amaro e Saubara, além dos oito municípios da RIDE Petrolina–Juazeiro: Petrolina, Lagoa Grande, Orocó, Santa Maria da Boa Vista, Juazeiro, Casa Nova, Curaçá e Sobradinho.
 
 ## Recursos
 

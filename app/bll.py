@@ -28,6 +28,23 @@ TARGETS = {
     "2904902": ["CACHOEIRA-BA", "MUNICIPIO DE CACHOEIRA", "MUNICÍPIO DE CACHOEIRA"],
     "2928604": ["SANTO AMARO-BA", "MUNICIPIO DE SANTO AMARO", "MUNICÍPIO DE SANTO AMARO"],
     "2929750": ["SAUBARA-BA", "MUNICIPIO DE SAUBARA", "MUNICÍPIO DE SAUBARA"],
+    "2611101": ["PETROLINA-PE", "MUNICIPIO DE PETROLINA", "MUNICÍPIO DE PETROLINA"],
+    "2608750": ["LAGOA GRANDE-PE", "MUNICIPIO DE LAGOA GRANDE", "MUNICÍPIO DE LAGOA GRANDE"],
+    "2609808": ["OROCO-PE", "MUNICIPIO DE OROCO", "MUNICÍPIO DE OROCÓ"],
+    "2612604": ["SANTA MARIA DA BOA VISTA-PE", "MUNICIPIO DE SANTA MARIA DA BOA VISTA", "MUNICÍPIO DE SANTA MARIA DA BOA VISTA"],
+    "2918407": ["JUAZEIRO-BA", "MUNICIPIO DE JUAZEIRO", "MUNICÍPIO DE JUAZEIRO"],
+    "2907202": ["CASA NOVA-BA", "MUNICIPIO DE CASA NOVA", "MUNICÍPIO DE CASA NOVA"],
+    "2909901": ["CURACA-BA", "MUNICIPIO DE CURACA", "MUNICÍPIO DE CURAÇÁ"],
+    "2930774": ["SOBRADINHO-BA", "MUNICIPIO DE SOBRADINHO", "MUNICÍPIO DE SOBRADINHO"],
+}
+
+# IDs dos estados na busca pública da BLL: BA=5, PE=16.
+SEARCH_CITIES_BY_STATE = {
+    "5": [
+        "Santo Amaro", "Saubara", "Cachoeira", "São Francisco do Conde",
+        "Juazeiro", "Casa Nova", "Curaçá", "Sobradinho",
+    ],
+    "16": ["Petrolina", "Lagoa Grande", "Orocó", "Santa Maria da Boa Vista"],
 }
 
 # Fallback real confirmado na BLL em 08/07/2026.
@@ -74,6 +91,11 @@ def _dt(value: str) -> Optional[str]:
 
 
 def _city_code(promoter: str, city: str) -> Optional[str]:
+    city_name = _norm(city)
+    for code, name in MUNICIPALITIES.items():
+        normalized_name = _norm(name)
+        if city_name == normalized_name or city_name.startswith(normalized_name + "-"):
+            return code
     hay = _norm(promoter + " " + city)
     for code, aliases in TARGETS.items():
         if any(_norm(alias) in hay for alias in aliases):
@@ -439,23 +461,19 @@ def fetch_all() -> List[dict]:
         "error": None,
     }
 
-    cities = [
-        "Santo Amaro",
-        "Saubara",
-        "Cachoeira",
-        "São Francisco do Conde",
-    ]
-
     try:
-        browser_rows, browser_diagnostics = (
-            collect_search_rows(
+        browser_rows = []
+        browser_diagnostics = {}
+        for state_id, cities in SEARCH_CITIES_BY_STATE.items():
+            state_rows, state_diagnostics = collect_search_rows(
                 cities=cities,
-                state_id="5",
+                state_id=state_id,
                 days_back=365,
                 future_days=365,
                 max_offsets=20,
             )
-        )
+            browser_rows.extend(state_rows)
+            browser_diagnostics[state_id] = state_diagnostics
 
         diagnostics["browser"] = (
             browser_diagnostics
@@ -650,4 +668,3 @@ def fetch_all() -> List[dict]:
         )
 
         raise
-

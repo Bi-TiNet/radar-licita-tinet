@@ -62,7 +62,7 @@ def fetch_city(city_code: str, lookback_days: int = 45, session: Optional[reques
         while page <= 5:
             params = {
                 "dataInicial": start.strftime("%Y%m%d"), "dataFinal": end.strftime("%Y%m%d"),
-                "codigoModalidadeContratacao": modality, "uf": "BA", "codigoMunicipioIbge": city_code,
+                "codigoModalidadeContratacao": modality, "uf": "PE" if city_code.startswith("26") else "BA", "codigoMunicipioIbge": city_code,
                 "pagina": page, "tamanhoPagina": 50,
             }
             response = s.get(BASE, params=params, headers=headers, timeout=30)
