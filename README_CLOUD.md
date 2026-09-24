@@ -12,6 +12,8 @@ Esta versão usa três serviços separados: GitHub Actions coleta a BLL a cada t
 6. Criar um bot exclusivo no Telegram com o [@BotFather](https://t.me/BotFather). Guardar o token apenas no *Actions secret* `RADAR_TELEGRAM_BOT_TOKEN`; não enviá-lo em mensagens. Cada uma das duas pessoas deve abrir o bot e enviar `/start` em uma conversa individual. Em **Run workflow**, marcar `discover_telegram`; o bot responderá em privado com o ID numérico de cada pessoa já conectada, sem exibir IDs no log público. Se somente uma pessoa tiver iniciado, ela receberá o próprio ID e o log indicará que falta a segunda; basta a outra iniciar o bot e repetir a descoberta. Conferir que são os destinatários desejados e salvar os dois IDs, separados por vírgula, no *Actions secret* `RADAR_TELEGRAM_CHAT_IDS`. Então executar `test_telegram` e confirmar uma mensagem de teste em cada conversa. Não usar grupo nem WhatsApp.
 7. Só após confirmar ambos os e-mails **e** ambos os chats, alterar `RADAR_NOTIFICATIONS_ENABLED` de `0` para `1` no workflow. Até lá a coleta continua funcionando e nenhum alerta real é enviado.
 
+As opções manuais `test_email`, `discover_telegram` e `test_telegram` executam somente o teste escolhido, sem depender da coleta na BLL. Para iniciar uma coleta manual, deixe as três opções desmarcadas. Uma falha temporária na busca da BLL não impede descobrir ou testar os destinatários.
+
 Enquanto o envio estiver desligado, cada item coletado recebe `alert_baselined_at`: ele aparece no painel, mas não dispara mensagem antiga quando os alertas forem ligados. Cada destino confirmado é registrado separadamente, para que uma falha em um endereço não reenvie aos demais na coleta seguinte.
 
 ## Limites e cuidados

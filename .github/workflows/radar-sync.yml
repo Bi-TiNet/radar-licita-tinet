@@ -44,8 +44,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -r requirements.txt
+      - name: Install browser for collection
+        if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.test_email || inputs.discover_telegram || inputs.test_telegram) }}
+        run: |
           python -m playwright install --with-deps chromium
       - name: Collect opportunities
+        if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.test_email || inputs.discover_telegram || inputs.test_telegram) }}
         env:
           SUPABASE_URL: https://bcjrwgnmwajvbidhnzuk.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.RADAR_SUPABASE_SECRET_KEY }}

@@ -89,7 +89,8 @@ def collect_search_rows(
                     )
                     page.wait_for_function(
                         "typeof ExecuteCaptcha === 'function' "
-                        "&& typeof grecaptcha !== 'undefined'",
+                        "&& typeof grecaptcha !== 'undefined' "
+                        "&& typeof grecaptcha.execute === 'function'",
                         timeout=timeout_ms,
                     )
 
@@ -352,4 +353,3 @@ def collect_detail_pages(
             "Falha ao abrir detalhes da BLL: "
             f"{type(exc).__name__}: {exc}"
         ) from exc
-
