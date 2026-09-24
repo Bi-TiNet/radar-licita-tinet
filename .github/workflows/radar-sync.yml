@@ -15,6 +15,14 @@ on:
         description: 'Enviar e-mail de teste para os dois destinatários cadastrados'
         type: boolean
         default: false
+      discover_telegram:
+        description: 'Enviar o ID em privado a cada pessoa que iniciou o bot'
+        type: boolean
+        default: false
+      test_telegram:
+        description: 'Enviar Telegram de teste aos dois destinatários cadastrados'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,13 +50,15 @@ jobs:
           SUPABASE_URL: https://bcjrwgnmwajvbidhnzuk.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.RADAR_SUPABASE_SECRET_KEY }}
           RADAR_NOTIFICATIONS_ENABLED: '0'
-          RADAR_NOTIFICATION_CHANNELS: 'email'
+          RADAR_NOTIFICATION_CHANNELS: 'email,telegram'
           MIN_SCORE_NOTIFY: '40'
           SMTP_HOST: ${{ secrets.RADAR_SMTP_HOST }}
           SMTP_PORT: '587'
           SMTP_USER: ${{ secrets.RADAR_SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.RADAR_SMTP_PASSWORD }}
           EMAIL_TO: ${{ secrets.RADAR_EMAIL_TO }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.RADAR_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.RADAR_TELEGRAM_CHAT_IDS }}
         run: python -m app.cloud_sync
       - name: Test email delivery
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_email }}
@@ -60,3 +70,15 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.RADAR_SMTP_PASSWORD }}
           EMAIL_TO: ${{ secrets.RADAR_EMAIL_TO }}
         run: python -m app.email_smoke
+      - name: Send private Telegram chat IDs
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.discover_telegram }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.RADAR_TELEGRAM_BOT_TOKEN }}
+        run: python -m app.telegram_setup
+      - name: Test Telegram delivery
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_telegram }}
+        env:
+          RADAR_NOTIFICATION_CHANNELS: 'telegram'
+          TELEGRAM_BOT_TOKEN: ${{ secrets.RADAR_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.RADAR_TELEGRAM_CHAT_IDS }}
+        run: python -m app.telegram_smoke

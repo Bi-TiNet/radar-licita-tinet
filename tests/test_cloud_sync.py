@@ -7,6 +7,9 @@ from unittest.mock import patch
 
 from app.cloud_sync import CloudStore, collect, recipients, send_pending, validate_alert_config
 from app.email_smoke import main as email_smoke
+from app.telegram_setup import main as telegram_setup
+from app.telegram_smoke import main as telegram_smoke
+from app.telegram_api import send_message as telegram_send_message
 
 
 ITEM = {
@@ -58,6 +61,57 @@ class FakeStore:
 
 
 class CloudSyncTests(unittest.TestCase):
+    def test_telegram_setup_sends_ids_privately(self):
+        with patch("app.telegram_setup.recent_chat_ids", return_value=[
+            ("123", "private"), ("456", "private"), ("-789", "group"),
+        ]), patch("app.telegram_setup.send_message") as sender, patch("builtins.print") as printer:
+            telegram_setup()
+        self.assertEqual({call.args[0] for call in sender.call_args_list}, {"123", "456"})
+        printed = " ".join(str(arg) for call in printer.call_args_list for arg in call.args)
+        self.assertNotIn("123", printed)
+        self.assertNotIn("456", printed)
+        self.assertNotIn("-789", printed)
+
+    def test_telegram_smoke_sends_individually(self):
+        with patch("app.telegram_smoke.validate_alert_config"), \
+                patch("app.telegram_smoke.recipients", return_value={
+                    ("telegram", "123"), ("telegram", "456"),
+                }), patch("app.telegram_smoke.send_message") as sender, \
+                patch("builtins.print"):
+            telegram_smoke()
+        self.assertEqual({call.args[0] for call in sender.call_args_list}, {"123", "456"})
+        self.assertTrue(all("TESTE" in call.args[1] for call in sender.call_args_list))
+
+    def test_telegram_api_does_not_leak_token_on_connection_error(self):
+        import requests
+        configured = SimpleNamespace(telegram_bot_token="secret-token")
+        with patch("app.telegram_api.settings", configured), \
+                patch("app.telegram_api.requests.post", side_effect=requests.ConnectionError(
+                    "https://api.telegram.org/botsecret-token/sendMessage"
+                )):
+            with self.assertRaises(RuntimeError) as raised:
+                telegram_send_message("123", "test")
+        self.assertNotIn("secret-token", str(raised.exception))
+
+    def test_telegram_config_requires_two_distinct_chats(self):
+        configured = SimpleNamespace(telegram_chat_id="123,456", telegram_bot_token="test-token")
+        with patch.dict(os.environ, {"RADAR_NOTIFICATION_CHANNELS": "telegram"}), \
+                patch("app.cloud_sync.settings", configured):
+            self.assertEqual(recipients(), {("telegram", "123"), ("telegram", "456")})
+            validate_alert_config()
+            configured.telegram_chat_id = "123"
+            with self.assertRaisesRegex(RuntimeError, "exatamente dois chats"):
+                validate_alert_config()
+
+    def test_telegram_sends_only_to_missing_recipient(self):
+        with patch("app.cloud_sync.recipients", return_value={
+            ("telegram", "123"), ("telegram", "456"),
+        }), patch("app.cloud_sync.send_telegram_message") as sender:
+            results = send_pending(ITEM, {("telegram", "123")})
+        sender.assert_called_once()
+        self.assertEqual(sender.call_args.args[0], "456")
+        self.assertEqual(results[0]["status"], "sent")
+
     def test_email_smoke_sends_only_to_configured_emails(self):
         with patch("app.email_smoke.enabled_channels", return_value={"email"}), \
                 patch("app.email_smoke.validate_alert_config"), \

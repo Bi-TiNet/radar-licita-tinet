@@ -16,6 +16,7 @@ import requests
 from .bll import fetch_all
 from .config import settings
 from .notifications import render_message, send_email, send_whatsapp
+from .telegram_api import send_message as send_telegram_message
 
 
 def now_iso() -> str:
@@ -156,20 +157,25 @@ def enabled_channels() -> set[str]:
         for value in os.environ.get("RADAR_NOTIFICATION_CHANNELS", "email,whatsapp").split(",")
         if value.strip()
     }
-    if not channels or not channels <= {"email", "whatsapp"}:
-        raise RuntimeError("Configure canais de alerta válidos: email e/ou whatsapp")
+    if not channels or not channels <= {"email", "telegram", "whatsapp"}:
+        raise RuntimeError("Configure canais de alerta válidos: email, telegram e/ou whatsapp")
     return channels
 
 
 def recipients() -> set[tuple[str, str]]:
     channels = enabled_channels()
-    emails = {value.strip().lower() for value in settings.email_to.split(",") if value.strip()}
-    phones = {"".join(ch for ch in value if ch.isdigit()) for value in settings.whatsapp_numbers.split(",") if value.strip()}
     destinations: set[tuple[str, str]] = set()
     if "email" in channels:
+        emails = {value.strip().lower() for value in settings.email_to.split(",") if value.strip()}
         destinations.update(("email", value) for value in emails)
     if "whatsapp" in channels:
+        phones = {"".join(ch for ch in value if ch.isdigit()) for value in settings.whatsapp_numbers.split(",") if value.strip()}
         destinations.update(("whatsapp", value) for value in phones)
+    if "telegram" in channels:
+        chats = {value.strip() for value in settings.telegram_chat_id.split(",") if value.strip()}
+        if any(not value.lstrip("-").isdigit() for value in chats):
+            raise RuntimeError("Configure IDs numéricos dos chats Telegram")
+        destinations.update(("telegram", value) for value in chats)
     return destinations
 
 
@@ -188,6 +194,10 @@ def validate_alert_config() -> None:
             raise RuntimeError("Configure uma API pública de WhatsApp antes de ativar os alertas")
         if settings.evolution_api_url.startswith(("http://127.", "http://localhost", "http://10.", "http://192.168.")):
             raise RuntimeError("A API de WhatsApp local não é alcançável pelo GitHub Actions")
+    if "telegram" in channels:
+        count = sum(channel == "telegram" for channel, _ in destinations)
+        if count != 2 or not settings.telegram_bot_token:
+            raise RuntimeError("Configure o bot e exatamente dois chats individuais Telegram")
 
 
 def send_pending(item: dict, already_sent: set[tuple[str, str]]) -> list[dict]:
@@ -197,7 +207,13 @@ def send_pending(item: dict, already_sent: set[tuple[str, str]]) -> list[dict]:
         if channel == "email":
             result = send_email(item, message, 0, recipients=[destination])
             results.append({**result, "recipient": destination})
-        else:
+        elif channel == "telegram":
+            try:
+                send_telegram_message(destination, message)
+                results.append({"channel": "telegram", "recipient": destination, "status": "sent"})
+            except RuntimeError as exc:
+                results.append({"channel": "telegram", "recipient": destination, "status": "error", "detail": str(exc)})
+        elif channel == "whatsapp":
             for result in send_whatsapp(item, message, 0, numbers=[destination]):
                 results.append({**result, "recipient": destination})
     return results
