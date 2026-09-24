@@ -72,6 +72,26 @@ class CloudSyncTests(unittest.TestCase):
         self.assertNotIn("456", printed)
         self.assertNotIn("-789", printed)
 
+    def test_telegram_setup_works_with_one_chat_and_explains_missing_second(self):
+        with patch("app.telegram_setup.recent_chat_ids", return_value=[("123", "private")]), \
+                patch("app.telegram_setup.send_message") as sender, patch("builtins.print") as printer:
+            telegram_setup()
+        sender.assert_called_once()
+        self.assertIn("falta a segunda pessoa", " ".join(str(call.args[0]) for call in printer.call_args_list))
+
+    def test_telegram_setup_handles_more_than_two_private_chats(self):
+        with patch("app.telegram_setup.recent_chat_ids", return_value=[
+            ("123", "private"), ("456", "private"), ("789", "private"),
+        ]), patch("app.telegram_setup.send_message") as sender, patch("builtins.print") as printer:
+            telegram_setup()
+        self.assertEqual(sender.call_count, 3)
+        self.assertIn("mais de duas", " ".join(str(call.args[0]) for call in printer.call_args_list))
+
+    def test_telegram_setup_explains_no_private_chats(self):
+        with patch("app.telegram_setup.recent_chat_ids", return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, "Nenhuma conversa privada"):
+                telegram_setup()
+
     def test_telegram_smoke_sends_individually(self):
         with patch("app.telegram_smoke.validate_alert_config"), \
                 patch("app.telegram_smoke.recipients", return_value={
