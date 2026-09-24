@@ -34,7 +34,7 @@ class Settings:
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "")
     smtp_host: str = os.getenv("SMTP_HOST", "")
-    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_port: int = int(os.getenv("SMTP_PORT") or "587")
     smtp_user: str = os.getenv("SMTP_USER", "")
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
     smtp_from: str = os.getenv("SMTP_FROM", "")
