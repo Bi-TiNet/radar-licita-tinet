@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: 'app/static',
+  root: 'cloud',
   build: {
-    outDir: '../../dist',
+    outDir: '../dist',
     emptyOutDir: true,
   },
 });

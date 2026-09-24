@@ -10,14 +10,3 @@
 .status-favorita{color:#fde68a;background:rgba(245,158,11,.12);border-color:rgba(251,191,36,.28)}
 .status-descartada{color:#fca5a5;background:rgba(239,68,68,.10);border-color:rgba(248,113,113,.25)}
 #syncBtn:disabled{opacity:.65;cursor:wait}
-/* Cloud login */
-[hidden] { display: none !important; }
-.login-shell { position: relative; z-index: 2; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-.login-card { width: min(440px, 100%); padding: 32px; border-radius: 24px; display: grid; gap: 12px; }
-.login-card .brand { margin-bottom: 10px; }
-.login-card h1 { margin: 4px 0 0; font-size: clamp(28px, 4vw, 38px); }
-.login-card p { margin: 0 0 8px; color: #b9c7dd; }
-.login-card label { font-size: 14px; font-weight: 700; }
-.login-card input { width: 100%; border: 1px solid #52627a; border-radius: 12px; padding: 13px 14px; background: #101b2d; color: #fff; font: inherit; }
-.login-card button { margin-top: 10px; width: 100%; }
-.login-card .login-error { min-height: 1.5em; color: #ffb9cc; }
