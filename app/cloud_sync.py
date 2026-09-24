@@ -150,22 +150,44 @@ class CloudStore:
         )
 
 
+def enabled_channels() -> set[str]:
+    channels = {
+        value.strip().lower()
+        for value in os.environ.get("RADAR_NOTIFICATION_CHANNELS", "email,whatsapp").split(",")
+        if value.strip()
+    }
+    if not channels or not channels <= {"email", "whatsapp"}:
+        raise RuntimeError("Configure canais de alerta válidos: email e/ou whatsapp")
+    return channels
+
+
 def recipients() -> set[tuple[str, str]]:
+    channels = enabled_channels()
     emails = {value.strip().lower() for value in settings.email_to.split(",") if value.strip()}
     phones = {"".join(ch for ch in value if ch.isdigit()) for value in settings.whatsapp_numbers.split(",") if value.strip()}
-    return {("email", value) for value in emails} | {("whatsapp", value) for value in phones}
+    destinations: set[tuple[str, str]] = set()
+    if "email" in channels:
+        destinations.update(("email", value) for value in emails)
+    if "whatsapp" in channels:
+        destinations.update(("whatsapp", value) for value in phones)
+    return destinations
 
 
 def validate_alert_config() -> None:
+    channels = enabled_channels()
     destinations = recipients()
-    if sum(channel == "email" for channel, _ in destinations) != 2:
-        raise RuntimeError("Configure exatamente dois e-mails de alerta")
-    if sum(channel == "whatsapp" for channel, _ in destinations) != 2:
-        raise RuntimeError("Configure exatamente dois números de WhatsApp")
-    if not (settings.smtp_host and settings.smtp_from and settings.evolution_api_url and settings.evolution_instance and settings.evolution_api_key):
-        raise RuntimeError("Configure SMTP e API pública de WhatsApp antes de ativar os alertas")
-    if settings.evolution_api_url.startswith(("http://127.", "http://localhost", "http://10.", "http://192.168.")):
-        raise RuntimeError("A API de WhatsApp local não é alcançável pelo GitHub Actions")
+    if "email" in channels:
+        if sum(channel == "email" for channel, _ in destinations) != 2:
+            raise RuntimeError("Configure exatamente dois e-mails de alerta")
+        if not (settings.smtp_host and settings.smtp_from and settings.smtp_user and settings.smtp_password):
+            raise RuntimeError("Configure SMTP antes de ativar os alertas por e-mail")
+    if "whatsapp" in channels:
+        if sum(channel == "whatsapp" for channel, _ in destinations) != 2:
+            raise RuntimeError("Configure exatamente dois números de WhatsApp")
+        if not (settings.evolution_api_url and settings.evolution_instance and settings.evolution_api_key):
+            raise RuntimeError("Configure uma API pública de WhatsApp antes de ativar os alertas")
+        if settings.evolution_api_url.startswith(("http://127.", "http://localhost", "http://10.", "http://192.168.")):
+            raise RuntimeError("A API de WhatsApp local não é alcançável pelo GitHub Actions")
 
 
 def send_pending(item: dict, already_sent: set[tuple[str, str]]) -> list[dict]:

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import os
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from app.cloud_sync import CloudStore, collect, send_pending
+from app.cloud_sync import CloudStore, collect, recipients, send_pending, validate_alert_config
+from app.email_smoke import main as email_smoke
 
 
 ITEM = {
@@ -56,6 +58,56 @@ class FakeStore:
 
 
 class CloudSyncTests(unittest.TestCase):
+    def test_email_smoke_sends_only_to_configured_emails(self):
+        with patch("app.email_smoke.enabled_channels", return_value={"email"}), \
+                patch("app.email_smoke.validate_alert_config"), \
+                patch("app.email_smoke.recipients", return_value={
+                    ("email", "one@example.com"), ("email", "two@example.com"),
+                }), \
+                patch("app.email_smoke.send_email", return_value={"status": "sent"}) as email, \
+                patch("builtins.print"):
+            email_smoke()
+        self.assertEqual(email.call_count, 2)
+        self.assertTrue(all(call.kwargs["subject"].startswith("TESTE") for call in email.call_args_list))
+
+    def test_email_only_config_ignores_whatsapp(self):
+        configured = SimpleNamespace(
+            email_to="one@example.com,two@example.com",
+            whatsapp_numbers="5575000000001,5575000000002",
+            smtp_host="mail.example.com",
+            smtp_from="alerts@example.com",
+            smtp_user="alerts@example.com",
+            smtp_password="test-password",
+            evolution_api_url="",
+            evolution_instance="",
+            evolution_api_key="",
+        )
+        with patch.dict(os.environ, {"RADAR_NOTIFICATION_CHANNELS": "email"}), patch("app.cloud_sync.settings", configured):
+            self.assertEqual(recipients(), {
+                ("email", "one@example.com"),
+                ("email", "two@example.com"),
+            })
+            validate_alert_config()
+
+    def test_invalid_notification_channel_is_rejected(self):
+        with patch.dict(os.environ, {"RADAR_NOTIFICATION_CHANNELS": "email,sms"}):
+            with self.assertRaisesRegex(RuntimeError, "canais de alerta válidos"):
+                recipients()
+
+    def test_email_only_sends_separately_to_two_addresses(self):
+        configured = SimpleNamespace(
+            email_to="one@example.com,two@example.com",
+            whatsapp_numbers="5575000000001,5575000000002",
+        )
+        with patch.dict(os.environ, {"RADAR_NOTIFICATION_CHANNELS": "email"}), \
+                patch("app.cloud_sync.settings", configured), \
+                patch("app.cloud_sync.send_email", return_value={"channel": "email", "status": "sent"}) as email, \
+                patch("app.cloud_sync.send_whatsapp") as whatsapp:
+            results = send_pending(ITEM, set())
+        self.assertEqual(email.call_count, 2)
+        whatsapp.assert_not_called()
+        self.assertEqual({result["recipient"] for result in results}, {"one@example.com", "two@example.com"})
+
     def test_new_secret_key_is_not_used_as_bearer_token(self):
         with patch.dict(os.environ, {
             "SUPABASE_URL": "https://example.supabase.co",
@@ -73,6 +125,13 @@ class CloudSyncTests(unittest.TestCase):
         self.assertEqual(store.logged, [])
         self.assertEqual(store.baselined, [12])
         self.assertEqual(store.finished[1], "success")
+
+    def test_baselined_opportunity_is_not_emailed_later(self):
+        store = FakeStore(alert_baselined_at="2026-09-24T10:00:00Z")
+        with patch.dict(os.environ, {"RADAR_NOTIFICATIONS_ENABLED": "1", "RADAR_NOTIFICATION_CHANNELS": "email"}):
+            collect(store, fetcher=lambda: [ITEM], notifier=lambda item, delivered: self.fail("unexpected alert"))
+        self.assertEqual(store.logged, [])
+        self.assertEqual(store.marked, [])
 
     def test_sends_only_once_for_eligible_opportunity(self):
         alerts = []

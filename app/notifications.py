@@ -70,14 +70,14 @@ def _whatsapp_recipients() -> List[str]:
     ]
 
 
-def send_email(item: dict, message: str, opportunity_id: int, recipients: Optional[List[str]] = None) -> Dict[str, Any]:
+def send_email(item: dict, message: str, opportunity_id: int, recipients: Optional[List[str]] = None, subject: Optional[str] = None) -> Dict[str, Any]:
     recipients = _email_recipients() if recipients is None else recipients
     if not settings.smtp_host or not recipients:
         return {"channel": "email", "status": "skipped", "detail": "E-mail não configurado"}
 
     try:
         msg = EmailMessage()
-        msg["Subject"] = "Licitação: {} • {}% aderência".format(
+        msg["Subject"] = subject or "Licitação: {} • {}% aderência".format(
             item.get("municipality") or "Radar Licita",
             item.get("score", 0),
         )
