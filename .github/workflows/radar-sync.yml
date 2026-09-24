@@ -29,7 +29,7 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Collect opportunities
         env:
-          SUPABASE_URL: ${{ secrets.RADAR_SUPABASE_URL }}
+          SUPABASE_URL: https://bcjrwgnmwajvbidhnzuk.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.RADAR_SUPABASE_SECRET_KEY }}
           RADAR_NOTIFICATIONS_ENABLED: ${{ secrets.RADAR_NOTIFICATIONS_ENABLED }}
           MIN_SCORE_NOTIFY: '40'
