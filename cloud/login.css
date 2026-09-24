@@ -7,4 +7,5 @@
 .login-card label { font-size: 14px; font-weight: 700; }
 .login-card input { width: 100%; border: 1px solid #52627a; border-radius: 12px; padding: 13px 14px; background: #101b2d; color: #fff; font: inherit; }
 .login-card button { margin-top: 10px; width: 100%; }
+.login-card .login-link { margin-top: 0; border: 0; padding: 8px; background: transparent; color: #9bdcff; cursor: pointer; text-decoration: underline; }
 .login-card .login-error { min-height: 1.5em; color: #ffb9cc; }

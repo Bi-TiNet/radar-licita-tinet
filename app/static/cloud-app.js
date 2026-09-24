@@ -234,6 +234,22 @@ $('#loginForm').addEventListener('submit', async (event) => {
   }
 });
 
+$('#resetPasswordBtn').addEventListener('click', async () => {
+  const email = $('#loginEmail').value.trim();
+  if (!email) { $('#loginError').textContent = 'Informe seu e-mail primeiro.'; return; }
+  if (!supabase) { $('#loginError').textContent = 'O painel ainda não foi configurado.'; return; }
+  const button = $('#resetPasswordBtn');
+  button.disabled = true;
+  try {
+    check(await supabase.auth.resetPasswordForEmail(email));
+    $('#loginError').textContent = 'Se esta conta estiver ativa, você receberá um novo link no e-mail.';
+  } catch (error) {
+    $('#loginError').textContent = `Não foi possível solicitar o link: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+});
+
 $('#logoutBtn').addEventListener('click', async () => {
   await supabase.auth.signOut();
   showLogin();
