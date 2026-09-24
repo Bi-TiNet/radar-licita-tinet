@@ -8,20 +8,57 @@ const linkError = initialHash.get('error_code');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = supabaseUrl && publishableKey ? createClient(supabaseUrl, publishableKey) : null;
-const municipalities = [
-  ['2929206', 'São Francisco do Conde'],
-  ['2904902', 'Cachoeira'],
-  ['2928604', 'Santo Amaro'],
-  ['2929750', 'Saubara'],
-  ['2611101', 'Petrolina (PE)'],
-  ['2608750', 'Lagoa Grande (PE)'],
-  ['2609808', 'Orocó (PE)'],
-  ['2612604', 'Santa Maria da Boa Vista (PE)'],
-  ['2918407', 'Juazeiro (BA)'],
-  ['2907202', 'Casa Nova (BA)'],
-  ['2909901', 'Curaçá (BA)'],
-  ['2930774', 'Sobradinho (BA)'],
+const regions = [
+  {
+    id: 'santo-amaro',
+    label: 'Santo Amaro e entorno',
+    cities: [
+      ['2928604', 'Santo Amaro'],
+      ['2929206', 'São Francisco do Conde'],
+      ['2904902', 'Cachoeira'],
+      ['2929750', 'Saubara'],
+    ],
+  },
+  {
+    id: 'petrolina-juazeiro',
+    label: 'Petrolina, Juazeiro e região',
+    cities: [
+      ['2611101', 'Petrolina (PE)'],
+      ['2918407', 'Juazeiro (BA)'],
+      ['2608750', 'Lagoa Grande (PE)'],
+      ['2609808', 'Orocó (PE)'],
+      ['2612604', 'Santa Maria da Boa Vista (PE)'],
+      ['2907202', 'Casa Nova (BA)'],
+      ['2909901', 'Curaçá (BA)'],
+      ['2930774', 'Sobradinho (BA)'],
+    ],
+  },
 ];
+
+function selectedRegion() {
+  return regions.find((region) => region.id === $('#region').value);
+}
+
+function populateCitySelect() {
+  const citySelect = $('#city');
+  citySelect.replaceChildren(new Option('Todas as cidades', ''));
+  for (const region of regions) {
+    if (selectedRegion() && selectedRegion().id !== region.id) continue;
+    const group = document.createElement('optgroup');
+    group.label = region.label;
+    for (const [code, name] of region.cities) group.append(new Option(name, code));
+    citySelect.append(group);
+  }
+}
+
+function renderRegionalCards(items) {
+  if (selectedRegion()) return items.map(card).join('');
+  return regions.map((region) => {
+    const codes = new Set(region.cities.map(([code]) => code));
+    const regionalItems = items.filter((item) => codes.has(item.municipality_code));
+    return `<section class="region-group"><div class="region-heading"><h3>${escapeHtml(region.label)}</h3><span>${regionalItems.length} exibidas</span></div><div class="region-cards">${regionalItems.length ? regionalItems.map(card).join('') : '<div class="region-empty">Nenhuma oportunidade neste grupo com os filtros atuais.</div>'}</div></section>`;
+  }).join('');
+}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (character) => ({
@@ -87,10 +124,31 @@ function card(item) {
 }
 
 async function loadDashboard() {
-  const { data } = check(await supabase.rpc('radar_dashboard'));
-  const stats = data || {};
+  const region = selectedRegion();
+  const city = $('#city').value;
+  let stats;
+  if (region || city) {
+    const scopedCount = async (extraFilter = (query) => query) => {
+      let query = supabase.from('radar_active_opportunities').select('id', { count: 'exact', head: true });
+      if (region) query = query.in('municipality_code', region.cities.map(([code]) => code));
+      if (city) query = query.eq('municipality_code', city);
+      const { count } = check(await extraFilter(query));
+      return count ?? 0;
+    };
+    const [total, open, hot, favorites] = await Promise.all([
+      scopedCount(),
+      scopedCount((query) => query.eq('status', 'aberta')),
+      scopedCount((query) => query.gte('score', 70)),
+      scopedCount((query) => query.eq('favorite', true)),
+    ]);
+    stats = { total, open, hot, favorites };
+  } else {
+    const { data } = check(await supabase.rpc('radar_dashboard'));
+    stats = data || {};
+  }
+  const scope = city ? 'na cidade selecionada' : region ? 'na região selecionada' : 'nas duas regiões';
   $('#stats').innerHTML = [
-    ['Oportunidades', stats.total || 0, 'na base monitorada'],
+    ['Oportunidades', stats.total || 0, scope],
     ['Abertas agora', stats.open || 0, 'com prazo ativo'],
     ['Alta aderência', stats.hot || 0, '70% ou mais'],
     ['Favoritos', stats.favorites || 0, 'para acompanhar'],
@@ -117,9 +175,11 @@ async function loadList() {
   }
 
   let query = supabase.from('radar_active_opportunities').select('*', { count: 'exact' });
+  const region = selectedRegion();
   const city = $('#city').value;
   const status = $('#status').value;
   const chosenScore = Number($('#score').value || 0);
+  if (region) query = query.in('municipality_code', region.cities.map(([code]) => code));
   if (city) query = query.eq('municipality_code', city);
   if (status) query = query.eq('status', status);
   if (state.view === 'general') query = query.lte('score', 39);
@@ -135,8 +195,9 @@ async function loadList() {
     opportunities: ['Oportunidades priorizadas', 'Aderência de 40% ou mais ao negócio da Ti.Net.'],
   };
   [$('#viewTitle').textContent, $('#viewDesc').textContent] = headings[state.view];
+  if (region) $('#viewDesc').textContent += ` Região: ${region.label}.`;
   $('#count').textContent = `${count ?? data.length} encontradas`;
-  $('#list').innerHTML = data.length ? data.map(card).join('') : '<div class="empty">Nenhuma oportunidade encontrada com estes filtros.</div>';
+  $('#list').innerHTML = data.length ? renderRegionalCards(data) : '<div class="empty">Nenhuma oportunidade encontrada com estes filtros.</div>';
 }
 
 async function refresh() {
@@ -270,15 +331,18 @@ document.querySelectorAll('.nav').forEach((button) => button.addEventListener('c
   $('#score').disabled = state.view === 'general';
   try { await loadList(); } catch (error) { toast(`Erro: ${error.message}`); }
 }));
-['city', 'score', 'status'].forEach((id) => $(`#${id}`).addEventListener('change', () => loadList().catch((error) => toast(error.message))));
+$('#region').addEventListener('change', () => {
+  populateCitySelect();
+  refresh().catch((error) => toast(error.message));
+});
+$('#city').addEventListener('change', () => refresh().catch((error) => toast(error.message)));
+['score', 'status'].forEach((id) => $(`#${id}`).addEventListener('change', () => loadList().catch((error) => toast(error.message))));
 let searchTimer;
 $('#search').addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => loadList().catch((error) => toast(error.message)), 350);
 });
-for (const [code, name] of municipalities) {
-  $('#city').insertAdjacentHTML('beforeend', `<option value="${code}">${escapeHtml(name)}</option>`);
-}
+populateCitySelect();
 if (!supabase) showLogin('Configure VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no Netlify.');
 else if (linkError) showLogin('Este link expirou. Solicite um novo convite de acesso.');
 else enter().catch((error) => showLogin(`Erro ao carregar: ${error.message}`));
