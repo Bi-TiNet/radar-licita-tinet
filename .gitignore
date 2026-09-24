@@ -41,3 +41,7 @@ diagnostico_bll_headless.py
 diagnostico_endpoint_bll.py
 diagnostico_playwright_bll.py
 data/playwright_bll_profile/
+
+# Frontend build
+node_modules/
+dist/

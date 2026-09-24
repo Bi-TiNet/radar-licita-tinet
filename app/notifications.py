@@ -3,7 +3,7 @@ from __future__ import annotations
 import smtplib
 from datetime import datetime, timezone
 from email.message import EmailMessage
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -70,8 +70,8 @@ def _whatsapp_recipients() -> List[str]:
     ]
 
 
-def send_email(item: dict, message: str, opportunity_id: int) -> Dict[str, Any]:
-    recipients = _email_recipients()
+def send_email(item: dict, message: str, opportunity_id: int, recipients: Optional[List[str]] = None) -> Dict[str, Any]:
+    recipients = _email_recipients() if recipients is None else recipients
     if not settings.smtp_host or not recipients:
         return {"channel": "email", "status": "skipped", "detail": "E-mail não configurado"}
 
@@ -102,8 +102,8 @@ def send_email(item: dict, message: str, opportunity_id: int) -> Dict[str, Any]:
         return {"channel": "email", "status": "error", "detail": detail}
 
 
-def send_whatsapp(item: dict, message: str, opportunity_id: int) -> List[Dict[str, Any]]:
-    numbers = _whatsapp_recipients()
+def send_whatsapp(item: dict, message: str, opportunity_id: int, numbers: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    numbers = _whatsapp_recipients() if numbers is None else numbers
     if not (
         settings.evolution_api_url
         and settings.evolution_instance

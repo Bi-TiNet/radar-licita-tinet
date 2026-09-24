@@ -1,20 +1,33 @@
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radar Licita ISP</title><link rel="stylesheet" href="/static/styles.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radar Licita ISP</title><link rel="stylesheet" href="/styles.css"></head>
 <body>
 <div class="ambient a1"></div><div class="ambient a2"></div>
-<div class="app">
+<section id="loginScreen" class="login-shell">
+  <form id="loginForm" class="login-card glass">
+    <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>Ti.Net</span></div></div>
+    <h1>Acesse o radar</h1>
+    <p>Entre com sua conta autorizada para acompanhar as licitações.</p>
+    <label for="loginEmail">E-mail</label>
+    <input id="loginEmail" type="email" autocomplete="username" required>
+    <label for="loginPassword">Senha</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" required>
+    <button class="primary" type="submit">Entrar</button>
+    <p id="loginError" class="login-error" role="alert"></p>
+  </form>
+</section>
+<div id="mainApp" class="app" hidden>
 <aside>
   <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>ISP Intelligence</span></div></div>
   <nav><button class="nav active" data-view="opportunities">⌁ <span>Oportunidades</span></button><button class="nav" data-view="general">▦ <span>Outras Oportunidades</span></button><button class="nav" data-view="favorites">★ <span>Favoritos</span></button><button class="nav" data-view="notifications">◉ <span>Notificações</span></button><button class="nav" data-view="sync">↻ <span>Coletas</span></button></nav>
-  <div class="source"><span class="pulse"></span><div><strong>PNCP conectado</strong><small>4 municípios monitorados</small></div></div>
+  <div class="source"><span class="pulse"></span><div><strong>BLL monitorada</strong><small>4 municípios monitorados</small></div></div>
 </aside>
 <main>
-<header><div><p class="eyebrow">CENTRAL DE OPORTUNIDADES PÚBLICAS</p><h1>Licitações que combinam com a <span>Ti.Net</span></h1><p class="sub">Monitoramento inteligente de telecom, fibra, links e infraestrutura de rede.</p></div><div class="actions"><span class="automation-badge" id="automationBadge">● Automático: 30 min</span><button class="ghost" id="demoBtn" style="display:none">Carregar demonstração</button><button class="ghost" id="testNotifyBtn">◉ Testar notificações</button><button class="primary" id="syncBtn">↻ Sincronizar agora</button></div></header>
+<header><div><p class="eyebrow">CENTRAL DE OPORTUNIDADES PÚBLICAS</p><h1>Licitações que combinam com a <span>Ti.Net</span></h1><p class="sub">Monitoramento inteligente de telecom, fibra, links e infraestrutura de rede.</p></div><div class="actions"><span class="automation-badge">● Coleta automática: a cada 3 horas</span><a class="ghost" href="https://github.com/Bi-TiNet/radar-licita-tinet/actions/workflows/radar-sync.yml" target="_blank" rel="noopener noreferrer">Coletar agora</a><button class="ghost" id="logoutBtn">Sair</button></div></header>
 <section class="stats" id="stats"></section>
 <section class="toolbar glass"><div class="search">⌕ <input id="search" placeholder="Buscar por objeto, órgão ou termo..."></div><select id="city"><option value="">Todos os municípios</option></select><select id="score"><option value="0">Qualquer aderência</option><option value="40">40%+</option><option value="60">60%+</option><option value="80">80%+</option></select><select id="status"><option value="">Todos os status</option><option value="aberta">Abertas</option><option value="encerrada">Encerradas</option></select></section>
 <section class="content"><div class="section-head"><div><h2 id="viewTitle">Oportunidades priorizadas</h2><p id="viewDesc">Ordenadas pelo nível de aderência ao negócio.</p></div><span class="count" id="count">0 encontradas</span></div><div id="list" class="cards"></div></section>
 </main></div>
 <div class="toast" id="toast"></div>
-<script src="/static/app.js"></script>
+<script type="module" src="/cloud-app.js"></script>
 </body></html>
