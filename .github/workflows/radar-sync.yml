@@ -30,7 +30,7 @@ jobs:
       - name: Collect opportunities
         env:
           SUPABASE_URL: ${{ secrets.RADAR_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.RADAR_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.RADAR_SUPABASE_SECRET_KEY }}
           RADAR_NOTIFICATIONS_ENABLED: ${{ secrets.RADAR_NOTIFICATIONS_ENABLED }}
           MIN_SCORE_NOTIFY: '40'
           SMTP_HOST: ${{ secrets.RADAR_SMTP_HOST }}

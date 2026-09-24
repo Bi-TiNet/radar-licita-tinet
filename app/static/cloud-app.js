@@ -2,9 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const $ = (selector) => document.querySelector(selector);
 const state = { view: 'opportunities', rows: new Map() };
+const initialHash = new URLSearchParams(window.location.hash.slice(1));
+let authFlow = initialHash.get('type');
+const linkError = initialHash.get('error_code');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = supabaseUrl && anonKey ? createClient(supabaseUrl, anonKey) : null;
+const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && publishableKey ? createClient(supabaseUrl, publishableKey) : null;
 const municipalities = [
   ['2929206', 'São Francisco do Conde'],
   ['2904902', 'Cachoeira'],
@@ -158,8 +161,15 @@ async function handleCardAction(event) {
 
 function showLogin(message = '') {
   $('#loginScreen').hidden = false;
+  $('#passwordScreen').hidden = true;
   $('#mainApp').hidden = true;
   $('#loginError').textContent = message;
+}
+
+function showPasswordSetup() {
+  $('#loginScreen').hidden = true;
+  $('#passwordScreen').hidden = false;
+  $('#mainApp').hidden = true;
 }
 
 async function enter() {
@@ -172,10 +182,39 @@ async function enter() {
     showLogin('Sua conta ainda não tem acesso ao Radar Licita.');
     return;
   }
+  if (authFlow === 'invite' || authFlow === 'recovery') {
+    showPasswordSetup();
+    return;
+  }
   $('#loginScreen').hidden = true;
+  $('#passwordScreen').hidden = true;
   $('#mainApp').hidden = false;
   await refresh();
 }
+
+$('#passwordForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const password = $('#newPassword').value;
+  if (password !== $('#confirmPassword').value) {
+    $('#passwordError').textContent = 'As senhas não coincidem.';
+    return;
+  }
+  const button = $('#passwordForm button[type=submit]');
+  button.disabled = true;
+  $('#passwordError').textContent = '';
+  try {
+    check(await supabase.auth.updateUser({ password }));
+    $('#newPassword').value = '';
+    $('#confirmPassword').value = '';
+    authFlow = null;
+    window.history.replaceState(null, '', window.location.pathname);
+    await enter();
+  } catch (error) {
+    $('#passwordError').textContent = `Não foi possível salvar a senha: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+});
 
 $('#loginForm').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -216,5 +255,6 @@ $('#search').addEventListener('input', () => {
 for (const [code, name] of municipalities) {
   $('#city').insertAdjacentHTML('beforeend', `<option value="${code}">${escapeHtml(name)}</option>`);
 }
-if (!supabase) showLogin('Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no Netlify.');
+if (!supabase) showLogin('Configure VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no Netlify.');
+else if (linkError) showLogin('Este link expirou. Solicite um novo convite de acesso.');
 else enter().catch((error) => showLogin(`Erro ao carregar: ${error.message}`));

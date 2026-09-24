@@ -4,7 +4,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.cloud_sync import collect, send_pending
+from app.cloud_sync import CloudStore, collect, send_pending
 
 
 ITEM = {
@@ -56,6 +56,15 @@ class FakeStore:
 
 
 class CloudSyncTests(unittest.TestCase):
+    def test_new_secret_key_is_not_used_as_bearer_token(self):
+        with patch.dict(os.environ, {
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SECRET_KEY": "sb_secret_test",
+        }):
+            store = CloudStore()
+        self.assertEqual(store.session.headers["apikey"], "sb_secret_test")
+        self.assertNotIn("Authorization", store.session.headers)
+
     def test_first_run_stores_without_sending_alerts_by_default(self):
         store = FakeStore()
         with patch.dict(os.environ, {"RADAR_NOTIFICATIONS_ENABLED": ""}):

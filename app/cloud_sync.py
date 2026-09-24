@@ -1,7 +1,7 @@
 """Scheduled BLL collector for GitHub Actions and Supabase.
 
 The browser collector and scoring rules remain the same as the local radar.
-Only persistence changes. No service-role key is ever sent to the browser.
+Only persistence changes. No secret key is ever sent to the browser.
 """
 
 from __future__ import annotations
@@ -25,16 +25,15 @@ def now_iso() -> str:
 class CloudStore:
     def __init__(self) -> None:
         url = os.environ.get("SUPABASE_URL", "").rstrip("/")
-        key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+        key = os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
         if not url.startswith("https://") or not key:
-            raise RuntimeError("SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios")
+            raise RuntimeError("SUPABASE_URL e SUPABASE_SECRET_KEY são obrigatórios")
         self.base_url = url + "/rest/v1"
         self.session = requests.Session()
-        self.session.headers.update({
-            "apikey": key,
-            "Authorization": "Bearer " + key,
-            "Content-Type": "application/json",
-        })
+        self.session.headers.update({"apikey": key, "Content-Type": "application/json"})
+        if key.startswith("eyJ"):
+            # Legacy service_role JWTs also work; new sb_secret keys are API keys only.
+            self.session.headers["Authorization"] = "Bearer " + key
 
     def request(self, method: str, table: str, *, params=None, payload=None, prefer=None) -> Any:
         headers = {"Prefer": prefer} if prefer else None

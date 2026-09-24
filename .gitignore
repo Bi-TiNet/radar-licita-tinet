@@ -45,3 +45,6 @@ data/playwright_bll_profile/
 # Frontend build
 node_modules/
 dist/
+
+# Local Netlify folder
+.netlify
