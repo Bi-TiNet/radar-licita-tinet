@@ -179,7 +179,7 @@ def validate_alert_config() -> None:
     if "email" in channels:
         if sum(channel == "email" for channel, _ in destinations) != 2:
             raise RuntimeError("Configure exatamente dois e-mails de alerta")
-        if not (settings.smtp_host and settings.smtp_from and settings.smtp_user and settings.smtp_password):
+        if not (settings.smtp_host and settings.smtp_user and settings.smtp_password):
             raise RuntimeError("Configure SMTP antes de ativar os alertas por e-mail")
     if "whatsapp" in channels:
         if sum(channel == "whatsapp" for channel, _ in destinations) != 2:

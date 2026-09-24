@@ -75,7 +75,7 @@ class CloudSyncTests(unittest.TestCase):
             email_to="one@example.com,two@example.com",
             whatsapp_numbers="5575000000001,5575000000002",
             smtp_host="mail.example.com",
-            smtp_from="alerts@example.com",
+            smtp_from="",
             smtp_user="alerts@example.com",
             smtp_password="test-password",
             evolution_api_url="",
