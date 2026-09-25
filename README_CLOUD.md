@@ -1,6 +1,13 @@
 # Radar Licita sem servidor Windows
 
-Esta versão usa três serviços separados: GitHub Actions coleta a BLL a cada três horas; um projeto Supabase exclusivo guarda os dados e autentica o único usuário do painel; Netlify publica apenas a interface. Não copiar o banco ou as credenciais da Agenda AutoControl.
+Esta versão usa três serviços separados: GitHub Actions coleta a BLL a cada três horas; um projeto Supabase exclusivo guarda os dados e autentica as contas autorizadas do painel; Netlify publica apenas a interface. Não copiar o banco ou as credenciais da Agenda AutoControl.
+
+## Foco das oportunidades
+
+- Santo Amaro, São Francisco do Conde, Cachoeira e Saubara: telecom para a Ti.Net e monitoramento/rastreamento veicular para a AutoControl.
+- Petrolina, Juazeiro e as seis cidades vizinhas monitoradas: somente monitoramento/rastreamento veicular para a AutoControl. Licitações de telecom dessa região não aparecem no foco nem geram alerta.
+- Credenciamentos de saúde, alimentação, CFTV isolado, compras/locação de veículos e TI genérica não entram no painel principal nem nos alertas. Os registros já coletados permanecem no banco para auditoria; nenhuma exclusão é feita.
+- A classificação é um filtro por objeto e localidade, não uma confirmação de habilitação para participar. Antes de agir, conferir edital, documentação exigida, local de execução e prazo na BLL.
 
 ## Ordem segura de ativação
 

@@ -18,5 +18,6 @@
 .region-heading span{color:var(--muted);font-size:12px;white-space:nowrap}
 .region-cards{display:grid;gap:12px}
 .region-empty{padding:18px;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
+.company-tag{color:#a7f3d0;background:rgba(16,185,129,.1);border-color:rgba(52,211,153,.24)}
 @media(max-width:1200px){.toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar .search{grid-column:1/-1}}
 @media(max-width:700px){.toolbar{grid-template-columns:1fr}.toolbar .search{grid-column:auto}}

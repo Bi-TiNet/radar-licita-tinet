@@ -15,6 +15,7 @@ import requests
 
 from .bll import fetch_all
 from .config import settings
+from .domain import classify_focus
 from .notifications import render_message, send_email, send_whatsapp
 from .telegram_api import send_message as send_telegram_message
 
@@ -229,8 +230,18 @@ def collect(store: CloudStore, *, fetcher=fetch_all, notifier=send_pending) -> d
         totals["found"] = len(items)
         for item in items:
             try:
+                focus_score, focus_terms, focus_category, company = classify_focus(
+                    item.get("title") or "",
+                    item.get("description") or "",
+                    str(item.get("municipality_code") or ""),
+                )
+                item = {**item, "score": focus_score, "matched_terms": focus_terms, "category": focus_category}
                 action, saved = store.upsert(item)
                 totals[action] += 1
+                if not company:
+                    if not saved.get("notified_at") and not saved.get("alert_baselined_at"):
+                        store.mark_baselined(int(saved["id"]))
+                    continue
                 if not allow_notifications:
                     if not saved.get("notified_at") and not saved.get("alert_baselined_at"):
                         store.mark_baselined(int(saved["id"]))

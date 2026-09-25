@@ -1,0 +1,16 @@
+{
+  "local_codes": ["2928604", "2929206", "2904902", "2929750"],
+  "regional_codes": ["2611101", "2608750", "2609808", "2612604", "2918407", "2907202", "2909901", "2930774"],
+  "telecom": {
+    "fiber": ["fibra optica", "fibra óptica", "ftth", "gpon", "rede optica", "rede óptica", "cabo optico", "cabo óptico", "fusão de fibra", "fusao de fibra", "olt", "onu", "ont"],
+    "internet": ["link dedicado", "link de internet", "acesso a internet", "acesso à internet", "fornecimento de internet", "servico de internet", "serviço de internet", "banda larga", "conexao a internet", "conexão à internet", "circuito de dados", "telecomunicacoes", "telecomunicações", "provedor de internet"],
+    "network": ["rede de dados", "cabeamento estruturado", "infraestrutura de rede", "rede wi-fi", "rede wifi", "solucao wi-fi", "solução wi-fi", "interconexao de redes", "interconexão de redes", "comunicacao de dados", "comunicação de dados"],
+    "telephony": ["telefonia ip", "voip", "pabx ip"]
+  },
+  "vehicle": {
+    "unrelated_primary_objects": ["locacao de veiculos", "locação de veículos", "aquisicao de veiculos", "aquisição de veículos", "compra de veiculos", "compra de veículos", "seguro de veiculos", "seguro de veículos"],
+    "direct": ["rastreamento veicular", "rastreamento de veiculos", "rastreamento de veículos", "rastreamento de frotas", "rastreamento de frota", "monitoramento veicular", "monitoramento de veiculos", "monitoramento de veículos", "monitoramento de frota", "monitoramento de frotas", "telemetria veicular", "telemetria de frota", "rastreador veicular", "rastreadores veiculares", "localizacao de veiculos", "localização de veículos", "gestao de frota por gps", "gestão de frota por gps"],
+    "context": ["veiculo", "veículo", "veiculos", "veículos", "frota", "frotas", "automovel", "automóvel", "caminhao", "caminhão", "onibus", "ônibus"],
+    "signal": ["gps", "geolocalizacao", "geolocalização", "rastreamento", "rastreador", "rastreadores", "telemetria", "localizacao em tempo real", "localização em tempo real"]
+  }
+}

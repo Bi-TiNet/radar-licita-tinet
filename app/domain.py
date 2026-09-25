@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import re
 import unicodedata
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 
@@ -21,6 +23,8 @@ MUNICIPALITIES = {
     "2909901": "Curaçá",
     "2930774": "Sobradinho",
 }
+
+FOCUS_RULES = json.loads((Path(__file__).with_name("focus_rules.json")).read_text(encoding="utf-8"))
 
 
 POSITIVE_TERMS = {
@@ -201,6 +205,41 @@ def score_relevance(
             best = count
 
     return score, sorted(set(hits))[:12], category
+
+
+def classify_focus(title: str, description: str, municipality_code: str) -> Tuple[int, List[str], str, Optional[str]]:
+    """Conservative business fit; the same rules are used by the cloud dashboard.
+
+    A tracking tender is relevant in either region. Telecom is relevant only near
+    Santo Amaro. Generic IT, CCTV and vehicle purchases are deliberately excluded.
+    """
+    text = normalize("{} {}".format(title, description))
+    vehicle = FOCUS_RULES["vehicle"]
+    vehicle_is_bundled = any(_contains_term(normalize(title), term) for term in vehicle["unrelated_primary_objects"])
+    direct = sorted({normalize(term) for term in vehicle["direct"] if _contains_term(text, term)})
+    context = sorted({normalize(term) for term in vehicle["context"] if _contains_term(text, term)})
+    signal = sorted({normalize(term) for term in vehicle["signal"] if _contains_term(text, term)})
+    if not vehicle_is_bundled and municipality_code in FOCUS_RULES["local_codes"] + FOCUS_RULES["regional_codes"] and (direct or (context and signal)):
+        hits = direct or (context[:2] + signal[:2])
+        return min(100, 75 + 5 * (len(hits) - 1)), hits[:12], "Monitoramento veicular", "AutoControl"
+
+    if municipality_code in FOCUS_RULES["local_codes"]:
+        matches = {
+            category: sorted({normalize(term) for term in terms if _contains_term(text, term)})
+            for category, terms in FOCUS_RULES["telecom"].items()
+        }
+        labels = {
+            "fiber": "Fibra & FTTH",
+            "internet": "Links & Internet",
+            "network": "Redes & Wi-Fi",
+            "telephony": "Telefonia IP",
+        }
+        strongest = max(matches, key=lambda category: len(matches[category]))
+        hits = sorted({term for found in matches.values() for term in found})
+        if hits:
+            return min(100, 65 + 7 * (len(hits) - 1)), hits[:12], labels[strongest], "Ti.Net"
+
+    return 0, [], "Fora do foco", None
 
 
 def opportunity_status(end_date: Optional[str]) -> str:

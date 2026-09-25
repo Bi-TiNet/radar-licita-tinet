@@ -5,7 +5,7 @@
 <div class="ambient a1"></div><div class="ambient a2"></div>
 <section id="loginScreen" class="login-shell">
   <form id="loginForm" class="login-card glass">
-    <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>Ti.Net</span></div></div>
+    <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>Ti.Net · AutoControl</span></div></div>
     <h1>Acesse o radar</h1>
     <p>Entre com sua conta autorizada para acompanhar as licitações.</p>
     <label for="loginEmail">E-mail</label>
@@ -19,7 +19,7 @@
 </section>
 <section id="passwordScreen" class="login-shell" hidden>
   <form id="passwordForm" class="login-card glass">
-    <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>Ti.Net</span></div></div>
+    <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>Ti.Net · AutoControl</span></div></div>
     <h1>Defina sua senha</h1>
     <p>Crie uma senha para acessar seu painel privado.</p>
     <label for="newPassword">Nova senha</label>
@@ -32,14 +32,14 @@
 </section>
 <div id="mainApp" class="app" hidden>
 <aside>
-  <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>ISP Intelligence</span></div></div>
-  <nav><button class="nav active" data-view="opportunities">⌁ <span>Oportunidades</span></button><button class="nav" data-view="general">▦ <span>Outras Oportunidades</span></button><button class="nav" data-view="favorites">★ <span>Favoritos</span></button><button class="nav" data-view="notifications">◉ <span>Notificações</span></button><button class="nav" data-view="sync">↻ <span>Coletas</span></button></nav>
+  <div class="brand"><div class="logo">R</div><div><strong>Radar Licita</strong><span>Ti.Net · AutoControl</span></div></div>
+  <nav><button class="nav active" data-view="opportunities">⌁ <span>Oportunidades</span></button><button class="nav" data-view="favorites">★ <span>Favoritos</span></button><button class="nav" data-view="notifications">◉ <span>Notificações</span></button><button class="nav" data-view="sync">↻ <span>Coletas</span></button></nav>
   <div class="source"><span class="pulse"></span><div><strong>BLL monitorada</strong><small>12 municípios monitorados</small></div></div>
 </aside>
 <main>
-<header><div><p class="eyebrow">CENTRAL DE OPORTUNIDADES PÚBLICAS</p><h1>Licitações que combinam com a <span>Ti.Net</span></h1><p class="sub">Monitoramento inteligente de telecom, fibra, links e infraestrutura de rede.</p></div><div class="actions"><span class="automation-badge">● Coleta automática: a cada 3 horas</span><button class="ghost" id="collectNowBtn" type="button" hidden>Coletar agora</button><button class="ghost" id="logoutBtn">Sair</button></div></header>
+<header><div><p class="eyebrow">CENTRAL DE OPORTUNIDADES PÚBLICAS</p><h1>Licitações para <span>Ti.Net e AutoControl</span></h1><p class="sub">Telecom e monitoramento veicular perto de Santo Amaro; monitoramento veicular em Petrolina, Juazeiro e região.</p></div><div class="actions"><span class="automation-badge">● Coleta automática: a cada 3 horas</span><button class="ghost" id="collectNowBtn" type="button" hidden>Coletar agora</button><button class="ghost" id="logoutBtn">Sair</button></div></header>
 <section class="stats" id="stats"></section>
-<section class="toolbar glass"><div class="search">⌕ <input id="search" placeholder="Buscar por objeto, órgão ou termo..."></div><select id="region" aria-label="Filtrar região"><option value="">Todas as regiões</option><option value="santo-amaro">Santo Amaro e entorno</option><option value="petrolina-juazeiro">Petrolina, Juazeiro e região</option></select><select id="city" aria-label="Filtrar cidade"><option value="">Todas as cidades</option></select><select id="score"><option value="0">Qualquer aderência</option><option value="40">40%+</option><option value="60">60%+</option><option value="80">80%+</option></select><select id="status"><option value="">Todos os status</option><option value="aberta">Abertas</option><option value="encerrada">Encerradas</option></select></section>
+<section class="toolbar glass"><div class="search">⌕ <input id="search" placeholder="Buscar por objeto, órgão ou termo..."></div><select id="region" aria-label="Filtrar região"><option value="">Todas as regiões</option><option value="santo-amaro">Santo Amaro e entorno</option><option value="petrolina-juazeiro">Petrolina, Juazeiro e região</option></select><select id="city" aria-label="Filtrar cidade"><option value="">Todas as cidades</option></select><select id="company" aria-label="Filtrar empresa"><option value="">Ti.Net + AutoControl</option><option value="Ti.Net">Ti.Net · Telecom</option><option value="AutoControl">AutoControl · Monitoramento</option></select><select id="status"><option value="">Todos os status</option><option value="aberta">Abertas</option><option value="encerrada">Encerradas</option></select></section>
 <section class="content"><div class="section-head"><div><h2 id="viewTitle">Oportunidades priorizadas</h2><p id="viewDesc">Ordenadas pelo nível de aderência ao negócio.</p></div><span class="count" id="count">0 encontradas</span></div><div id="list" class="cards"></div></section>
 </main></div>
 <div class="toast" id="toast"></div>

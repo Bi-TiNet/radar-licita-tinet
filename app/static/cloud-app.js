@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import { classifyFocus, normalize } from '../focus.js';
 
 const $ = (selector) => document.querySelector(selector);
-const state = { view: 'opportunities', rows: new Map() };
+const state = { view: 'opportunities', rows: new Map(), opportunities: [] };
 const initialHash = new URLSearchParams(window.location.hash.slice(1));
 let authFlow = initialHash.get('type');
 const linkError = initialHash.get('error_code');
@@ -36,6 +37,27 @@ const regions = [
   },
 ];
 
+async function fetchFocusedOpportunities() {
+  const rows = [];
+  for (let start = 0; ; start += 500) {
+    const { data } = check(await supabase.from('radar_active_opportunities').select('*').order('id').range(start, start + 499));
+    rows.push(...data);
+    if (data.length < 500) break;
+  }
+  state.opportunities = rows.map((item) => ({ ...item, focus: classifyFocus(item) })).filter((item) => item.focus);
+}
+
+function scopedOpportunities() {
+  const region = selectedRegion();
+  const city = $('#city').value;
+  const company = $('#company').value;
+  const regionCodes = region && new Set(region.cities.map(([code]) => code));
+  return state.opportunities.filter((item) =>
+    (!regionCodes || regionCodes.has(item.municipality_code))
+    && (!city || item.municipality_code === city)
+    && (!company || item.focus.company === company));
+}
+
 function selectedRegion() {
   return regions.find((region) => region.id === $('#region').value);
 }
@@ -52,12 +74,22 @@ function populateCitySelect() {
   }
 }
 
+function updateCompanySelect() {
+  const regionalOnly = selectedRegion()?.id === 'petrolina-juazeiro';
+  const companySelect = $('#company');
+  const tinetOption = [...companySelect.options].find((option) => option.value === 'Ti.Net');
+  tinetOption.disabled = regionalOnly;
+  companySelect.options[0].textContent = regionalOnly ? 'AutoControl · Monitoramento' : 'Ti.Net + AutoControl';
+  if (regionalOnly && companySelect.value === 'Ti.Net') companySelect.value = '';
+}
+
 function renderRegionalCards(items) {
   if (selectedRegion()) return items.map(card).join('');
   return regions.map((region) => {
     const codes = new Set(region.cities.map(([code]) => code));
     const regionalItems = items.filter((item) => codes.has(item.municipality_code));
-    return `<section class="region-group"><div class="region-heading"><h3>${escapeHtml(region.label)}</h3><span>${regionalItems.length} exibidas</span></div><div class="region-cards">${regionalItems.length ? regionalItems.map(card).join('') : '<div class="region-empty">Nenhuma oportunidade neste grupo com os filtros atuais.</div>'}</div></section>`;
+    if (!regionalItems.length) return '';
+    return `<section class="region-group"><div class="region-heading"><h3>${escapeHtml(region.label)}</h3><span>${regionalItems.length} exibidas</span></div><div class="region-cards">${regionalItems.map(card).join('')}</div></section>`;
   }).join('');
 }
 
@@ -104,17 +136,17 @@ function workflowStatus(item) {
 function card(item) {
   const status = workflowStatus(item);
   const labels = { nova: 'Nova', notificada: 'Notificada', visualizada: 'Visualizada', favorita: 'Favorita' };
-  const score = Math.min(100, Math.max(0, Number(item.score) || 0));
+  const score = item.focus.score;
   const description = String(item.description || '');
-  const terms = (Array.isArray(item.matched_terms) ? item.matched_terms : [])
+  const terms = item.focus.terms
     .slice(0, 4).map((term) => `<span class="tag">${escapeHtml(term)}</span>`).join('');
   return `<article class="card">
     <div class="score-ring" style="--score:${score}"><strong>${score}%</strong></div>
     <div><div class="workflow-row"><span class="workflow-status status-${status}">${labels[status] || 'Nova'}</span></div>
       <h3>${escapeHtml(item.title)}</h3>
-      <div class="meta"><span>📍 ${escapeHtml(item.municipality)}</span><span>🏛️ ${escapeHtml(item.agency || 'Órgão público')}</span><span>⏰ ${escapeHtml(date(item.proposal_end_at))}</span><span>💰 ${escapeHtml(money(item.estimated_value))}</span></div>
+      <div class="meta"><span>📍 ${escapeHtml(item.municipality)}</span><span>🏛️ ${escapeHtml(item.agency || 'Órgão público')}</span><span>⏰ ${/credenciamento/i.test(item.modality || '') ? 'Fim do credenciamento' : 'Prazo'}: ${escapeHtml(date(item.proposal_end_at))}</span><span>💰 ${escapeHtml(money(item.estimated_value))}</span></div>
       <p class="details">${escapeHtml(description.slice(0, 240))}${description.length > 240 ? '…' : ''}</p>
-      <div class="meta"><span class="tag">${escapeHtml(item.category || 'Correlato')}</span>${terms}</div>
+      <div class="meta"><span class="tag company-tag">${escapeHtml(item.focus.company)}</span><span class="tag">${escapeHtml(item.focus.category)}</span>${terms}</div>
     </div>
     <div class="card-actions">
       <button class="icon-btn ${item.favorite ? 'active' : ''}" title="Favoritar" data-action="favorite" data-id="${item.id}">★</button>
@@ -127,26 +159,13 @@ function card(item) {
 async function loadDashboard() {
   const region = selectedRegion();
   const city = $('#city').value;
-  let stats;
-  if (region || city) {
-    const scopedCount = async (extraFilter = (query) => query) => {
-      let query = supabase.from('radar_active_opportunities').select('id', { count: 'exact', head: true });
-      if (region) query = query.in('municipality_code', region.cities.map(([code]) => code));
-      if (city) query = query.eq('municipality_code', city);
-      const { count } = check(await extraFilter(query));
-      return count ?? 0;
-    };
-    const [total, open, hot, favorites] = await Promise.all([
-      scopedCount(),
-      scopedCount((query) => query.eq('status', 'aberta')),
-      scopedCount((query) => query.gte('score', 70)),
-      scopedCount((query) => query.eq('favorite', true)),
-    ]);
-    stats = { total, open, hot, favorites };
-  } else {
-    const { data } = check(await supabase.rpc('radar_dashboard'));
-    stats = data || {};
-  }
+  const items = scopedOpportunities();
+  const stats = {
+    total: items.length,
+    open: items.filter((item) => item.status === 'aberta').length,
+    hot: items.filter((item) => item.focus.score >= 70).length,
+    favorites: items.filter((item) => item.favorite).length,
+  };
   const scope = city ? 'na cidade selecionada' : region ? 'na região selecionada' : 'nas duas regiões';
   $('#stats').innerHTML = [
     ['Oportunidades', stats.total || 0, scope],
@@ -175,33 +194,29 @@ async function loadList() {
     return;
   }
 
-  let query = supabase.from('radar_active_opportunities').select('*', { count: 'exact' });
+  let data = scopedOpportunities();
   const region = selectedRegion();
-  const city = $('#city').value;
   const status = $('#status').value;
-  const chosenScore = Number($('#score').value || 0);
-  if (region) query = query.in('municipality_code', region.cities.map(([code]) => code));
-  if (city) query = query.eq('municipality_code', city);
-  if (status) query = query.eq('status', status);
-  if (state.view === 'general') query = query.lte('score', 39);
-  else query = query.gte('score', state.view === 'opportunities' ? Math.max(40, chosenScore) : chosenScore);
-  if (state.view === 'favorites') query = query.eq('favorite', true);
-  const search = $('#search').value.trim().replace(/[(),.%\\"]/g, ' ').slice(0, 100);
-  if (search) query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,agency.ilike.%${search}%`);
-  const { data, count } = check(await query.order('favorite', { ascending: false }).order('score', { ascending: false }).order('proposal_end_at', { ascending: true, nullsFirst: false }).limit(100));
+  if (status) data = data.filter((item) => item.status === status);
+  if (state.view === 'favorites') data = data.filter((item) => item.favorite);
+  const search = normalize($('#search').value.trim().slice(0, 100));
+  if (search) data = data.filter((item) => normalize(`${item.title} ${item.description} ${item.agency}`).includes(search));
+  data.sort((a, b) => Number(b.favorite) - Number(a.favorite)
+    || b.focus.score - a.focus.score
+    || String(a.proposal_end_at || '9999').localeCompare(String(b.proposal_end_at || '9999')));
   state.rows = new Map(data.map((item) => [String(item.id), item]));
   const headings = {
     favorites: ['Oportunidades favoritas', 'Itens separados para acompanhamento.'],
-    general: ['Outras oportunidades', 'Licitações gerais dos 12 municípios monitorados, separadas do radar principal de telecom.'],
-    opportunities: ['Oportunidades priorizadas', 'Aderência de 40% ou mais ao negócio da Ti.Net.'],
+    opportunities: ['Oportunidades no foco', 'Ti.Net: telecom perto de Santo Amaro. AutoControl: monitoramento veicular nas duas regiões.'],
   };
   [$('#viewTitle').textContent, $('#viewDesc').textContent] = headings[state.view];
   if (region) $('#viewDesc').textContent += ` Região: ${region.label}.`;
-  $('#count').textContent = `${count ?? data.length} encontradas`;
+  $('#count').textContent = `${data.length} encontradas`;
   $('#list').innerHTML = data.length ? renderRegionalCards(data) : '<div class="empty">Nenhuma oportunidade encontrada com estes filtros.</div>';
 }
 
 async function refresh() {
+  await fetchFocusedOpportunities();
   await Promise.all([loadDashboard(), loadList()]);
 }
 
@@ -354,21 +369,23 @@ document.querySelectorAll('.nav').forEach((button) => button.addEventListener('c
   document.querySelectorAll('.nav').forEach((element) => element.classList.remove('active'));
   button.classList.add('active');
   state.view = button.dataset.view;
-  $('#score').disabled = state.view === 'general';
   try { await loadList(); } catch (error) { toast(`Erro: ${error.message}`); }
 }));
 $('#region').addEventListener('change', () => {
   populateCitySelect();
-  refresh().catch((error) => toast(error.message));
+  updateCompanySelect();
+  Promise.all([loadDashboard(), loadList()]).catch((error) => toast(error.message));
 });
-$('#city').addEventListener('change', () => refresh().catch((error) => toast(error.message)));
-['score', 'status'].forEach((id) => $(`#${id}`).addEventListener('change', () => loadList().catch((error) => toast(error.message))));
+$('#city').addEventListener('change', () => Promise.all([loadDashboard(), loadList()]).catch((error) => toast(error.message)));
+$('#company').addEventListener('change', () => Promise.all([loadDashboard(), loadList()]).catch((error) => toast(error.message)));
+$('#status').addEventListener('change', () => loadList().catch((error) => toast(error.message)));
 let searchTimer;
 $('#search').addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => loadList().catch((error) => toast(error.message)), 350);
 });
 populateCitySelect();
+updateCompanySelect();
 if (!supabase) showLogin('Configure VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no Netlify.');
 else if (linkError) showLogin('Este link expirou. Solicite um novo convite de acesso.');
 else enter().catch((error) => showLogin(`Erro ao carregar: ${error.message}`));

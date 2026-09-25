@@ -9,9 +9,13 @@ import requests
 
 from .config import settings
 from .db import execute
+from .domain import classify_focus
 
 
 def render_message(item: dict) -> str:
+    _, _, _, company = classify_focus(
+        item.get("title") or "", item.get("description") or "", str(item.get("municipality_code") or "")
+    )
     value = item.get("estimated_value")
     if value:
         value_text = ("R$ {:,.2f}".format(value)
@@ -24,6 +28,7 @@ def render_message(item: dict) -> str:
     return (
         "🚨 NOVA OPORTUNIDADE DE LICITAÇÃO\n\n"
         "📍 Município: {}\n"
+        "🏢 Empresa: {}\n"
         "🏛️ Órgão: {}\n"
         "🏷️ Categoria: {}\n"
         "🎯 Aderência: {}%\n\n"
@@ -33,6 +38,7 @@ def render_message(item: dict) -> str:
         "🔗 {}"
     ).format(
         item.get("municipality") or "Não informado",
+        company or "Não classificada",
         item.get("agency") or "Órgão público",
         item.get("category") or "Outras oportunidades",
         item.get("score", 0),
@@ -77,9 +83,11 @@ def send_email(item: dict, message: str, opportunity_id: int, recipients: Option
 
     try:
         msg = EmailMessage()
-        msg["Subject"] = subject or "Licitação: {} • {}% aderência".format(
-            item.get("municipality") or "Radar Licita",
-            item.get("score", 0),
+        _, _, _, company = classify_focus(
+            item.get("title") or "", item.get("description") or "", str(item.get("municipality_code") or "")
+        )
+        msg["Subject"] = subject or "Licitação {}: {}".format(
+            company or "Radar Licita", item.get("municipality") or "oportunidade"
         )
         msg["From"] = settings.smtp_from or settings.smtp_user
         msg["To"] = ", ".join(recipients)

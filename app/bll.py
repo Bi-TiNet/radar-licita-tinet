@@ -12,7 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 from .bll_browser import collect_detail_pages, collect_search_rows
 
-from .domain import MUNICIPALITIES, score_relevance
+from .domain import MUNICIPALITIES, classify_focus
 
 BASE = "https://bllcompras.com"
 SEARCH_URLS = [
@@ -414,7 +414,7 @@ def _adapt(raw: dict, object_text: Optional[str] = None, estimated_value: Option
     code = raw["municipality_code"]
     description = object_text or raw.get("object") or raw.get("title") or raw["notice_number"]
     title = description if len(description) <= 180 else description[:177].rstrip() + "..."
-    score, terms, category = score_relevance(title, description)
+    score, terms, category, _ = classify_focus(title, description, code)
     ext_src = "%s|%s|%s" % (code, _norm(raw["notice_number"]), _norm(raw.get("agency") or ""))
     ext = hashlib.sha256(ext_src.encode("utf-8")).hexdigest()[:24]
     return {

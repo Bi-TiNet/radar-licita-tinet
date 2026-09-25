@@ -207,6 +207,31 @@ class CloudSyncTests(unittest.TestCase):
         self.assertEqual(store.logged, [])
         self.assertEqual(store.marked, [])
 
+    def test_out_of_scope_does_not_alert_even_with_old_high_score(self):
+        store = FakeStore()
+        unrelated = {**ITEM, "title": "Credenciamento de buffet", "description": "Serviços de alimentação", "score": 99}
+        with patch.dict(os.environ, {"RADAR_NOTIFICATIONS_ENABLED": "1"}):
+            collect(store, fetcher=lambda: [unrelated], notifier=lambda *_: self.fail("unexpected alert"))
+        self.assertEqual(store.baselined, [12])
+        self.assertEqual(store.marked, [])
+
+    def test_juazeiro_telecom_does_not_alert(self):
+        store = FakeStore()
+        unrelated = {**ITEM, "municipality_code": "2918407", "title": "Link dedicado em fibra", "description": "Internet"}
+        with patch.dict(os.environ, {"RADAR_NOTIFICATIONS_ENABLED": "1"}):
+            collect(store, fetcher=lambda: [unrelated], notifier=lambda *_: self.fail("unexpected alert"))
+        self.assertEqual(store.baselined, [12])
+
+    def test_juazeiro_tracking_alerts(self):
+        store = FakeStore()
+        tracking = {**ITEM, "municipality_code": "2918407", "title": "Rastreamento veicular", "description": "Monitoramento de frota por GPS", "score": 0}
+        with patch.dict(os.environ, {"RADAR_NOTIFICATIONS_ENABLED": "1"}), \
+                patch("app.cloud_sync.recipients", return_value=DESTINATIONS):
+            collect(store, fetcher=lambda: [tracking], notifier=lambda *_: [
+                {"channel": channel, "recipient": recipient, "status": "sent"} for channel, recipient in DESTINATIONS
+            ])
+        self.assertEqual(store.marked, [12])
+
     def test_sends_only_once_for_eligible_opportunity(self):
         alerts = []
         def notifier(item, delivered):
