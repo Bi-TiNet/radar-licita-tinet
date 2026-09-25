@@ -1,5 +1,8 @@
 const SUPABASE_URL = 'https://bcjrwgnmwajvbidhnzuk.supabase.co';
-const OWNER_EMAIL = 'bi@tinettecnologia.com.br';
+const COLLECTOR_EMAILS = new Set([
+  'bi@tinettecnologia.com.br',
+  'diegosmfranca@hotmail.com',
+]);
 const SITE_ORIGIN = 'https://radar-licita-tinet.netlify.app';
 const WORKFLOW_URL = 'https://api.github.com/repos/Bi-TiNet/radar-licita-tinet/actions/workflows/radar-sync.yml/dispatches';
 
@@ -10,7 +13,7 @@ function json(status, body) {
   });
 }
 
-async function verifiedOwner(jwt, publishableKey) {
+async function verifiedCollector(jwt, publishableKey) {
   const headers = { apikey: publishableKey, Authorization: `Bearer ${jwt}` };
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers,
@@ -18,7 +21,7 @@ async function verifiedOwner(jwt, publishableKey) {
   });
   if (!userResponse.ok) return false;
   const user = await userResponse.json();
-  if (user.email?.toLowerCase() !== OWNER_EMAIL) return false;
+  if (!COLLECTOR_EMAILS.has(user.email?.toLowerCase())) return false;
 
   // Keep the database allowlist authoritative if this account is ever revoked.
   const accessResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/radar_is_authorized`, {
@@ -43,7 +46,7 @@ export default async function handler(request) {
   if (!publishableKey) return json(503, { error: 'Autenticação da coleta não configurada no servidor.' });
 
   try {
-    if (!(await verifiedOwner(match[1], publishableKey))) {
+    if (!(await verifiedCollector(match[1], publishableKey))) {
       return json(403, { error: 'Sua conta não pode iniciar coletas.' });
     }
 

@@ -44,11 +44,11 @@ test('requires a bearer session', async () => {
   assert.equal(response.status, 401);
 });
 
-test('does not let Diego or another panel member start a collection', async () => {
+test('does not let a non-designated panel member start a collection', async () => {
   const calls = [];
   global.fetch = async (url) => {
     calls.push(url);
-    return Response.json({ email: 'diegosmfranca@hotmail.com' });
+    return Response.json({ email: 'other@example.com' });
   };
   assert.equal((await handler(request())).status, 403);
   assert.equal(calls.length, 1);
@@ -80,6 +80,19 @@ test('dispatches the existing GitHub workflow for the authorized owner', async (
   assert.match(calls[2].url, /radar-sync\.yml\/dispatches$/);
   assert.deepEqual(JSON.parse(calls[2].options.body), { ref: 'main' });
   assert.equal(calls[2].options.headers.Authorization, 'Bearer github_pat_test');
+});
+
+test('lets Diego dispatch the same workflow after allowlist validation', async () => {
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url, options });
+    if (calls.length === 1) return Response.json({ email: 'diegosmfranca@hotmail.com' });
+    if (calls.length === 2) return Response.json(true);
+    return new Response(null, { status: 204 });
+  };
+  assert.equal((await handler(request())).status, 202);
+  assert.equal(calls.length, 3);
+  assert.match(calls[2].url, /radar-sync\.yml\/dispatches$/);
 });
 
 test('reports missing GitHub configuration without dispatching', async () => {

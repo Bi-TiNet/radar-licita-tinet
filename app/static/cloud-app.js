@@ -8,7 +8,7 @@ const linkError = initialHash.get('error_code');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = supabaseUrl && publishableKey ? createClient(supabaseUrl, publishableKey) : null;
-const collectorEmail = 'bi@tinettecnologia.com.br';
+const collectorEmails = new Set(['bi@tinettecnologia.com.br', 'diegosmfranca@hotmail.com']);
 const regions = [
   {
     id: 'santo-amaro',
@@ -259,7 +259,7 @@ async function enter() {
   $('#loginScreen').hidden = true;
   $('#passwordScreen').hidden = true;
   $('#mainApp').hidden = false;
-  $('#collectNowBtn').hidden = session.user.email?.toLowerCase() !== collectorEmail;
+  $('#collectNowBtn').hidden = !collectorEmails.has(session.user.email?.toLowerCase());
   await refresh();
 }
 
