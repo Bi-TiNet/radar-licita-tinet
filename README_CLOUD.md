@@ -14,6 +14,14 @@ Esta versão usa três serviços separados: GitHub Actions coleta a BLL a cada t
 
 As opções manuais `test_email`, `discover_telegram` e `test_telegram` executam somente o teste escolhido, sem depender da coleta na BLL. Para iniciar uma coleta manual, deixe as três opções desmarcadas. Uma falha temporária na busca da BLL não impede descobrir ou testar os destinatários.
 
+## Botão “Coletar agora” no painel
+
+O botão solicita a execução do workflow já existente, sem abrir o GitHub. Ele aparece somente para `bi@tinettecnologia.com.br` e a função no Netlify valida novamente o token do Supabase, o e-mail e a lista `radar_access`; outros usuários autorizados no painel, como Diego, não podem disparar a coleta.
+
+Para ativá-lo, crie no GitHub um **fine-grained personal access token** limitado ao repositório `Bi-TiNet/radar-licita-tinet`, com somente a permissão de repositório **Actions: Read and write**. Defina um prazo de expiração e guarde o valor apenas na variável `RADAR_GITHUB_DISPATCH_TOKEN` nas configurações de ambiente do site Netlify; nunca use prefixo `VITE_` nem coloque o valor no Git, na interface ou em mensagens. Caso a organização exija aprovação do token, conclua essa aprovação no GitHub. Confirme que `VITE_SUPABASE_PUBLISHABLE_KEY` está disponível também para Functions (ou configure `RADAR_SUPABASE_PUBLISHABLE_KEY` no Netlify com a chave pública do projeto). Faça um novo deploy depois de salvar as variáveis. A função ficará indisponível com mensagem clara enquanto a credencial não estiver configurada.
+
+O clique confirma apenas o agendamento no GitHub; o resultado da coleta aparece depois na aba **Coletas**. A execução automática a cada três horas e as regras de alerta não mudam.
+
 Enquanto o envio estiver desligado, cada item coletado recebe `alert_baselined_at`: ele aparece no painel, mas não dispara mensagem antiga quando os alertas forem ligados. Cada destino confirmado é registrado separadamente, para que uma falha em um endereço não reenvie aos demais na coleta seguinte.
 
 ## Limites e cuidados

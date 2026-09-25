@@ -8,6 +8,7 @@ const linkError = initialHash.get('error_code');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = supabaseUrl && publishableKey ? createClient(supabaseUrl, publishableKey) : null;
+const collectorEmail = 'bi@tinettecnologia.com.br';
 const regions = [
   {
     id: 'santo-amaro',
@@ -258,8 +259,33 @@ async function enter() {
   $('#loginScreen').hidden = true;
   $('#passwordScreen').hidden = true;
   $('#mainApp').hidden = false;
+  $('#collectNowBtn').hidden = session.user.email?.toLowerCase() !== collectorEmail;
   await refresh();
 }
+
+$('#collectNowBtn').addEventListener('click', async () => {
+  const button = $('#collectNowBtn');
+  button.disabled = true;
+  button.textContent = 'Solicitando…';
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session) throw new Error('Sua sessão expirou. Entre novamente.');
+    const response = await fetch('/.netlify/functions/collect-now', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Não foi possível iniciar a coleta.');
+    toast(result.message);
+    const collectionsTab = document.querySelector('.nav[data-view="sync"]');
+    collectionsTab.click();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Coletar agora';
+  }
+});
 
 $('#passwordForm').addEventListener('submit', async (event) => {
   event.preventDefault();
