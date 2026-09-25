@@ -53,7 +53,7 @@ jobs:
         env:
           SUPABASE_URL: https://bcjrwgnmwajvbidhnzuk.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.RADAR_SUPABASE_SECRET_KEY }}
-          RADAR_NOTIFICATIONS_ENABLED: '0'
+          RADAR_NOTIFICATIONS_ENABLED: '1'
           RADAR_NOTIFICATION_CHANNELS: 'email,telegram'
           MIN_SCORE_NOTIFY: '40'
           SMTP_HOST: ${{ secrets.RADAR_SMTP_HOST }}
